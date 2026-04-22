@@ -1,3 +1,4 @@
+/* eslint-disable tailwindcss/classnames-order */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,7 +39,7 @@ const fieldLabels = {
 };
 
 const stepRequiredFields = {
-  1: ['fullName', 'dob', 'gender', 'aadhaar', 'religion', 'community', 'caste', 'admissionType'],
+  1: ['fullName', 'dob', 'gender', 'aadhaar', 'religion', 'community', 'caste'],
   2: ['mobile', 'email', 'commAddress'],
   3: ['fatherName', 'motherName', 'parentOccupation', 'annualIncome'],
   4: ['mediumOfInstruction', 'civicSchoolType', 'qualifyingBoard', 'registerNumber', 'lastInstitute'],
@@ -77,12 +78,35 @@ const SUBJECT_CONFIG = {
   HSC: { count: 6, subjects: ['Tamil', 'English', 'Maths', 'Physics', 'Chemistry', 'Biology'] }
 };
 
-/** Which mark-entry tabs (step 5) are available for a given admission category from registration */
-const ADMISSION_MARK_TABS = {
-  'First Year': ['SSLC'],
-  'Lateral Entry': ['SSLC', 'HSC','ITI'],
-  /** Part-time: show every qualification track (same set as unrestricted legacy). */
-  'Part Time': ['HSC', 'VOC', 'SSLC', 'ITI'],
+const MARK_TAB_ORDER = ['SSLC', 'HSC', 'ITI', 'VOC'];
+
+const normalizeAdmissionType = (value) => {
+  const raw = value != null ? String(value).trim() : '';
+  if (raw === 'Lateral-1[12]' || raw === 'Lateral-2[ITI]' || raw === 'Lateral Entry (2nd Year)') {
+    return 'Lateral Entry';
+  }
+  return raw;
+};
+
+const isLateralEntryAdmission = (value) => normalizeAdmissionType(value) === 'Lateral Entry';
+
+const getAdmissionMarkTabConfig = (admissionType) => {
+  const raw = normalizeAdmissionType(admissionType);
+  const isFirstYear = raw === 'First Year';
+  const isLateral = isLateralEntryAdmission(raw);
+  const isPartTime = raw === 'Part Time';
+
+  return MARK_TAB_ORDER.map((type) => {
+    let enabled = true;
+    if (isFirstYear) {
+      enabled = type === 'SSLC';
+    } else if (isLateral) {
+      enabled = type !== 'SSLC';
+    } else if (isPartTime) {
+      enabled = true;
+    }
+    return { type, enabled };
+  });
 };
 
 /** Application fee (INR) for payment / display; uses fees_master match on community, else default from server. */
@@ -102,6 +126,8 @@ function communityApplicationFeeInr(community, master) {
 
 /** SC / SCA / ST: always zero fee on the portal (direct submit). Others use fees_master + default. */
 const STATUTORY_NO_FEE_COMMUNITIES = ['SC', 'SCA', 'ST'];
+const COMMON_UPLOAD_ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx';
+const COMMON_UPLOAD_LABEL = 'PDF / JPG / JPEG / PNG / WEBP / DOC / DOCX';
 
 function payableApplicationFeeInr(community, master) {
   const c = (community || '').trim().toUpperCase();
@@ -110,17 +136,14 @@ function payableApplicationFeeInr(community, master) {
 }
 
 const getAdmissionAllowedMarkTabs = (admissionType) => {
-  const raw = admissionType != null ? String(admissionType).trim() : '';
-  if (!raw) return ['SSLC', 'ITI', 'VOC', 'HSC'];
-  if (ADMISSION_MARK_TABS[raw]) return ADMISSION_MARK_TABS[raw];
-  if (raw === 'Lateral Entry (2nd Year)') return ['SSLC', 'HSC'];
-  return ['SSLC', 'ITI', 'VOC', 'HSC'];
+  return getAdmissionMarkTabConfig(admissionType)
+    .filter(tab => tab.enabled)
+    .map(tab => tab.type);
 };
 
 /** Second marksheet upload only for lateral entry (SSLC + one other board), not Part Time with all tabs */
 const admissionRequiresSecondMarksheetUpload = (admissionType) => {
-  const raw = admissionType != null ? String(admissionType).trim() : '';
-  return raw === 'Lateral-1[12]' || raw === 'Lateral-2[ITI]';
+  return isLateralEntryAdmission(admissionType);
 };
 
 const ApplicationForm = () => {
@@ -145,7 +168,7 @@ const ApplicationForm = () => {
     ITI: { 1: {} }, HSC: { 1: {} }, VOC: { 1: {} }
   });
   const [selectedAttempts, setSelectedAttempts] = useState({
-    SSLC: [1], ITI: [1], HSC: [1], VOC: [1]
+    SSLC: [], ITI: [], HSC: [], VOC: []
   });
   const [previewUrl, setPreviewUrl] = useState(null);
 
@@ -408,8 +431,8 @@ const ApplicationForm = () => {
     }
 
     // 2. Identify active mark tab (must stay within admission-allowed tabs)
-    const allTypes = ['SSLC', 'ITI', 'VOC', 'HSC'];
-    const allowedTabs = getAdmissionAllowedMarkTabs(s.admission_type);
+    const allTypes = MARK_TAB_ORDER;
+    const allowedTabs = getAdmissionAllowedMarkTabs(normalizeAdmissionType(s.admission_type));
     const fromMarks = allTypes.find(t => m && m[`${t.toLowerCase()}_subject1`]);
     const fromFlags = allTypes.find(t => s[t.toLowerCase()] === 'yes' || s[t.toLowerCase()] === 'Yes');
     const candidate = (fromMarks && allowedTabs.includes(fromMarks) ? fromMarks : null)
@@ -493,7 +516,7 @@ const ApplicationForm = () => {
         religion: s.religion || '',
         community: s.community || '',
         caste: s.caste || '',
-        admissionType: s.admission_type || prev.admissionType,
+        admissionType: normalizeAdmissionType(s.admission_type) || prev.admissionType,
         motherTongue: s.mother_tongue || '',
         mediumOfInstruction: s.medium_of_instruction || '',
         nativity: s.nativity || '',
@@ -585,6 +608,18 @@ const ApplicationForm = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    // Cascade resets for interdependent dropdowns
+    if (name === 'religion') {
+      setFormData(prev => ({ ...prev, religion: value, community: '', caste: '' }));
+      setErrors(prev => ({ ...prev, religion: null, community: null, caste: null }));
+      return;
+    }
+    if (name === 'community') {
+      setFormData(prev => ({ ...prev, community: value, caste: '' }));
+      setErrors(prev => ({ ...prev, community: null, caste: null }));
+      return;
+    }
 
     // Numeric-only enforcement for specific fields
     const numericFields = ['aadhaar', 'mobile', 'alternateMobile', 'annualIncome', 'registerNumber', 'hscRegisterNo', 'sslcRegisterNo'];
@@ -991,7 +1026,7 @@ const ApplicationForm = () => {
           {/* Premium Admission Timeline 2026 - Optimized for Mobile & Desktop */}
           <div className="pt-6 pb-8 border-t border-slate-100 bg-slate-50/20 px-2 lg:px-0">
             <div className="max-w-5xl mx-auto overflow-x-auto scrollbar-hide snap-mandatory snap-x">
-              <div className="flex items-start justify-between min-w-[650px] lg:min-w-0 lg:w-full relative px-6 md:px-0 py-4">
+              <div className="flex items-start justify-between min-w-162.5 lg:min-w-0 lg:w-full relative px-6 md:px-0 py-4">
                 {steps.map((step, idx) => {
                   const isCompleted = isStepComplete(step.id) && (currentStep > step.id || isSubmitted);
                   const isActive = currentStep === step.id;
@@ -1003,7 +1038,7 @@ const ApplicationForm = () => {
                       {/* Connecting Line Segment between nodes */}
                       {idx !== 0 && (
                         <div
-                          className={`absolute top-[21px] right-[calc(50%+22px)] w-[calc(100%-44px)] h-[2.5px] transition-all duration-700
+                          className={`absolute top-5 right-[calc(50%+22px)] w-[calc(100%-44px)] h-[2.5px] transition-all duration-700
                             ${isCompleted || isActive ? 'bg-emerald-500' : 'bg-slate-200'}`}
                           style={{ zIndex: -1 }}
                         />
@@ -1035,11 +1070,11 @@ const ApplicationForm = () => {
 
                       {/* Compact Labels - Hidden on XS Mobile, adaptive sizing */}
                       <div className="text-center mt-3 hidden sm:block">
-                        <p className={`text-[7px] md:text-[8px] font-black uppercase tracking-[0.1em] mb-1 transition-colors duration-300
+                        <p className={`text-[7px] md:text-[8px] font-black uppercase tracking-widest mb-1 transition-colors duration-300
                           ${isActive ? 'text-blue-600' : isCompleted ? 'text-emerald-500' : 'text-slate-400'}`}>
                           {isActive ? 'Active' : isCompleted ? 'Done' : 'Wait'}
                         </p>
-                        <h4 className={`text-[8px] md:text-[9px] font-black leading-tight tracking-tight transition-all duration-300 max-w-[60px] md:max-w-[70px] mx-auto
+                        <h4 className={`text-[8px] md:text-[9px] font-black leading-tight tracking-tight transition-all duration-300 max-w-15 md:max-w-17.5 mx-auto
                           ${isActive || isCompleted ? 'text-blue-950' : 'text-slate-400 opacity-60'}`}>
                           {step.title}
                         </h4>
@@ -1073,10 +1108,13 @@ const ApplicationForm = () => {
                 {errors.marks && (
                   <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm font-semibold">{errors.marks}</div>
                 )}
+                {errors.attempts && (
+                  <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm font-semibold">{errors.attempts}</div>
+                )}
                 <EducationSelector
                   selectedType={formData.qualifyingType}
                   setQualifyingType={(t) => setFormData({ ...formData, qualifyingType: t.toLowerCase() })}
-                  allowedTypes={getAdmissionAllowedMarkTabs(formData.admissionType)}
+                  tabConfig={getAdmissionMarkTabConfig(formData.admissionType)}
                   disabled={isSubmitted}
                 />
                 {formData.qualifyingType && (
@@ -1192,7 +1230,7 @@ const FormSummary = ({ data, onGoToStep, isSubmitted, applicationNo, eduHistory,
   const SummaryField = ({ label, value }) => (
     <div className="space-y-1">
       <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="font-bold text-blue-950 break-words text-sm">{value || <span className="text-red-400 font-medium italic">Not Provided</span>}</p>
+      <p className="font-bold text-blue-950 wrap-break-word text-sm">{value || <span className="text-red-400 font-medium italic">Not Provided</span>}</p>
     </div>
   );
 
@@ -1231,7 +1269,7 @@ const FormSummary = ({ data, onGoToStep, isSubmitted, applicationNo, eduHistory,
   return (
     <div className="px-1 md:px-2">
       <div className="mb-8 p-4 md:p-10 bg-blue-950 rounded-2xl text-white shadow-xl shadow-blue-100">
-        <h3 className="text-lg md:text-2xl font-black uppercase tracking-tight mb-2 !text-white italic">Review Application Details</h3>
+        <h3 className="text-lg md:text-2xl font-black uppercase tracking-tight mb-2 text-white! italic">Review Application Details</h3>
         <p className="text-blue-200 text-[10px] md:text-sm font-medium leading-relaxed max-w-2xl">
           Please verify all information before final submission. Once submitted, details cannot be changed without administrative intervention.
         </p>
@@ -1400,11 +1438,67 @@ const FormSummary = ({ data, onGoToStep, isSubmitted, applicationNo, eduHistory,
 // ─────────────────────────────────────────────────────────
 // Step components
 // ─────────────────────────────────────────────────────────
-const PersonalDetails = ({ data, errors, onChange, master, disabled, applicationFeeInr = 0 }) => (
-  <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
-    <div className="md:col-span-2">
-      <SectionTitle title="1. Personal Information" subtitle="Enter your legal details as they appear on your official school and identification documents." />
+const PersonalDetails = ({ data, errors, onChange, master, disabled, applicationFeeInr = 0 }) => {
+  const [casteOther, setCasteOther] = React.useState(false);
+
+  // Derive filtered communities based on selected religion from the hierarchy
+  const religionObj = master?.religions?.find(r => r.name === data.religion);
+  const religionEntry = religionObj ? master?.religionHierarchy?.[religionObj.id] : null;
+  const availableCommunities = religionEntry?.communities?.length
+    ? religionEntry.communities
+    : null; // null = fall back to full list
+
+  // Derive filtered castes based on selected religion, then narrow by community if possible
+  const communityEntry = availableCommunities?.find(c => c.communityName === data.community);
+  const availableCastes = communityEntry?.castes?.length
+    ? communityEntry.castes
+    : (religionEntry?.castes || []);
+  const hasCastes = availableCastes.length > 0;
+
+  // Keep casteOther in sync when parent clears caste
+  React.useEffect(() => {
+    if (!data.caste) setCasteOther(false);
+  }, [data.religion, data.community, data.caste]);
+
+  // Clear stale caste values when the selected religion/community no longer supports them
+  React.useEffect(() => {
+    if (!data.caste || casteOther) return;
+    if (!hasCastes) return;
+    const casteStillValid = availableCastes.some(c => c.casteName === data.caste);
+    if (!casteStillValid) {
+      onChange({ target: { name: 'caste', value: '' } });
+    }
+  }, [availableCastes, casteOther, data.caste, hasCastes, onChange]);
+
+  const handleCasteSelect = (e) => {
+    if (e.target.value === '__others__') {
+      setCasteOther(true);
+      onChange({ target: { name: 'caste', value: '' } });
+    } else {
+      setCasteOther(false);
+      onChange({ target: { name: 'caste', value: e.target.value } });
+    }
+  };
+
+  const casteSelectValue = casteOther
+    ? '__others__'
+    : (hasCastes && availableCastes.some(c => c.casteName === data.caste) ? data.caste : '');
+
+  return (
+  <div className="space-y-8">
+    {/* Admission Category Badge - At Top, Non-Editable */}
+    <div className="flex justify-center">
+      <div className="flex items-center justify-center gap-3 px-6 py-3 bg-linear-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-full shadow-sm">
+        <span className="text-xs font-black uppercase tracking-widest text-blue-600">Admission Category</span>
+        <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+        <span className="text-sm font-black text-blue-900">{data.admissionType}</span>
+      </div>
     </div>
+
+    <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+      <div className="md:col-span-2">
+        <SectionTitle title="1. Personal Information" subtitle="Enter your legal details as they appear on your official school and identification documents." />
+      </div>
 
     <FormField label="Full Name" required error={errors.fullName} tooltip="Enter as per school records" disabled={disabled} layout="horizontal">
       <input type="text" name="fullName" value={data.fullName} onChange={onChange} placeholder="Full Name" disabled={disabled} />
@@ -1433,12 +1527,17 @@ const PersonalDetails = ({ data, errors, onChange, master, disabled, application
     </FormField>
 
     <FormField label="Community" required error={errors.community} disabled={disabled} layout="horizontal">
-      <select name="community" value={data.community} onChange={onChange} disabled={disabled}>
-        <option value="">Select Community</option>
-        {(master?.communities || ['BC', 'BCM', 'MBC', 'DNC', 'SC', 'ST', 'OC']).map(opt => {
-          const label = opt.community_name || opt;
-          return <option key={opt.id || label} value={label}>{label}</option>;
-        })}
+      <select name="community" value={data.community} onChange={onChange} disabled={!data.religion || disabled}>
+        <option value="">{data.religion ? 'Select Community' : 'Select Religion first'}</option>
+        {availableCommunities
+          ? availableCommunities.map(c => (
+              <option key={c.communityId} value={c.communityName}>{c.communityName}</option>
+            ))
+          : (master?.communities || ['BC', 'BCM', 'BCO', 'MBC/DNC', 'OC', 'SC', 'SCA', 'ST']).map(opt => {
+              const label = opt.community_name || opt;
+              return <option key={opt.id || label} value={label}>{label}</option>;
+            })
+        }
       </select>
       {data.community ? (
         <p className="text-[11px] font-semibold text-slate-500 mt-1.5">
@@ -1458,13 +1557,41 @@ const PersonalDetails = ({ data, errors, onChange, master, disabled, application
     </FormField>
 
     <FormField label="Caste Name" required error={errors.caste} disabled={disabled} layout="horizontal">
-      <input type="text" name="caste" value={data.caste} onChange={onChange} placeholder="Enter sub-caste" disabled={disabled} />
-    </FormField>
-
-    <FormField label="Admission Category" required error={errors.admissionType} disabled={disabled} layout="horizontal">
-      <select name="admissionType" className="font-bold text-blue-700" value={data.admissionType} onChange={onChange} disabled={disabled}>
-        {(master?.admissionType || ['First Year', 'Lateral-1[12]', 'Lateral-2[ITI]', 'Part Time']).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
+      {hasCastes ? (
+        <>
+          <select
+            value={casteSelectValue}
+            onChange={handleCasteSelect}
+            disabled={!data.religion || disabled}
+          >
+            <option value="">{data.religion ? 'Select Caste' : 'Select Religion first'}</option>
+            {availableCastes.map(c => (
+              <option key={c.casteId} value={c.casteName}>{c.casteName}</option>
+            ))}
+            <option value="__others__">Others (specify below)</option>
+          </select>
+          {casteOther && (
+            <input
+              type="text"
+              name="caste"
+              value={data.caste}
+              onChange={onChange}
+              placeholder="Type your caste name"
+              className="mt-2"
+              disabled={disabled}
+            />
+          )}
+        </>
+      ) : (
+        <input
+          type="text"
+          name="caste"
+          value={data.caste}
+          onChange={onChange}
+          placeholder={data.religion ? 'Enter caste / sub-caste' : 'Select Religion first'}
+          disabled={disabled}
+        />
+      )}
     </FormField>
 
     <FormField label="Mother Tongue" disabled={disabled} layout="horizontal">
@@ -1497,11 +1624,50 @@ const PersonalDetails = ({ data, errors, onChange, master, disabled, application
     </FormField>
 
     <FormField label="District" error={errors.civicNative} disabled={disabled} layout="horizontal">
-      <input type="text" name="civicNative" value={data.civicNative} onChange={onChange}
-        placeholder="Enter district name" disabled={disabled} />
+      <select name="civicNative" value={data.civicNative} onChange={onChange} disabled={disabled}>
+        <option value="">Select District</option>
+        <option value="Ariyalur">Ariyalur</option>
+        <option value="Chengalpattu">Chengalpattu</option>
+        <option value="Chennai">Chennai</option>
+        <option value="Coimbatore">Coimbatore</option>
+        <option value="Cuddalore">Cuddalore</option>
+        <option value="Dharmapuri">Dharmapuri</option>
+        <option value="Dindigul">Dindigul</option>
+        <option value="Erode">Erode</option>
+        <option value="Kallakurichi">Kallakurichi</option>
+        <option value="Kanchipuram">Kanchipuram</option>
+        <option value="Kanyakumari">Kanyakumari</option>
+        <option value="Karur">Karur</option>
+        <option value="Krishnagiri">Krishnagiri</option>
+        <option value="Madurai">Madurai</option>
+        <option value="Mayiladuthurai">Mayiladuthurai</option>
+        <option value="Nagapattinam">Nagapattinam</option>
+        <option value="Namakkal">Namakkal</option>
+        <option value="Nilgiris">Nilgiris</option>
+        <option value="Perambalur">Perambalur</option>
+        <option value="Pudukkottai">Pudukkottai</option>
+        <option value="Ramanathapuram">Ramanathapuram</option>
+        <option value="Ranipet">Ranipet</option>
+        <option value="Salem">Salem</option>
+        <option value="Sivaganga">Sivaganga</option>
+        <option value="Tenkasi">Tenkasi</option>
+        <option value="Thanjavur">Thanjavur</option>
+        <option value="Theni">Theni</option>
+        <option value="Thiruvallur">Thiruvallur</option>
+        <option value="Thiruvannamalai">Thiruvannamalai</option>
+        <option value="Thiruvarur">Thiruvarur</option>
+        <option value="Thoothukudi">Thoothukudi</option>
+        <option value="Tirupathur">Tirupathur</option>
+        <option value="Tiruppur">Tiruppur</option>
+        <option value="Tiruchirappalli">Tiruchirappalli</option>
+        <option value="Vellore">Vellore</option>
+        <option value="Villupuram">Villupuram</option>
+      </select>
     </FormField>
+    </div>
   </div>
-);
+  );
+};
 
 const ContactInfo = ({ data, errors, onChange, disabled }) => (
   <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
@@ -1525,7 +1691,7 @@ const ContactInfo = ({ data, errors, onChange, disabled }) => (
 
     <div className="md:col-span-2">
       <FormField label="Permanent Address" required error={errors.commAddress} disabled={disabled} layout="horizontal">
-        <textarea name="commAddress" className="min-h-[120px] py-3 px-4 resize-none" value={data.commAddress} onChange={onChange} placeholder="House No, Street, Village/City, District, Pincode" required disabled={disabled} />
+        <textarea name="commAddress" className="min-h-30 py-3 px-4 resize-none" value={data.commAddress} onChange={onChange} placeholder="House No, Street, Village/City, District, Pincode" required disabled={disabled} />
       </FormField>
     </div>
 
@@ -1540,14 +1706,14 @@ const ContactInfo = ({ data, errors, onChange, disabled }) => (
     {!data.sameAsComm && (
       <div className="md:col-span-2">
         <FormField label="Current Address" disabled={disabled} layout="horizontal">
-          <textarea name="permAddress" className="min-h-[120px] py-3 px-4 resize-none" value={data.permAddress} onChange={onChange} placeholder="Enter full permanent address..." disabled={disabled} />
+          <textarea name="permAddress" className="min-h-30 py-3 px-4 resize-none" value={data.permAddress} onChange={onChange} placeholder="Enter full permanent address..." disabled={disabled} />
         </FormField>
       </div>
     )}
   </div>
 );
 
-const ParentDetails = ({ data, errors, onChange, master, disabled }) => (
+const ParentDetails = ({ data, errors, onChange, disabled }) => (
   <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
     <div className="md:col-span-2">
       <SectionTitle title="3. Parent/Guardian Information" subtitle="Provide parental/guardian background details for identity and eligibility verification." />
@@ -1562,10 +1728,15 @@ const ParentDetails = ({ data, errors, onChange, master, disabled }) => (
     </FormField>
 
     <FormField label="Parent Occupation" required error={errors.parentOccupation} disabled={disabled} layout="horizontal">
-      <select name="parentOccupation" value={data.parentOccupation} onChange={onChange} required disabled={disabled}>
-        <option value="">Select Occupation</option>
-        {(master?.parentOccupation || ['Farmer', 'Business', 'Govt Employee', 'Private Employee', 'Daily Wages', 'Professionals', 'Others']).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
+      <input
+        type="text"
+        name="parentOccupation"
+        value={data.parentOccupation}
+        onChange={onChange}
+        placeholder="Type occupation"
+        required
+        disabled={disabled}
+      />
     </FormField>
 
     <FormField label="Family Annual Income (₹)" required error={errors.annualIncome} tooltip="Total yearly household income" disabled={disabled} layout="horizontal">
@@ -1598,7 +1769,7 @@ const AcademicDetails = ({ data, errors, onChange, onDistrictChange, onEduHistDi
       <FormField label="Qualifying Examination Board" required error={errors.qualifyingBoard} disabled={disabled} layout="horizontal">
         <select name="qualifyingBoard" value={data.qualifyingBoard} onChange={onChange} required disabled={disabled}>
           <option value="">Select Board</option>
-          {(master?.qualifyingBoard || ['Tamil Nadu State Board', 'CBSE', 'ICSE', 'ITI/Diploma', 'Others']).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          {(master?.qualifyingBoard || ['State Board', 'CBSE', 'ICSE', 'ITI', 'Others']).map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
       </FormField>
 
@@ -1788,7 +1959,7 @@ const SpecialCategory = ({ data, onChange, disabled }) => (
       <CheckboxCard label="Eminent Sports Person" name="isSportsPerson" checked={data.isSportsPerson} onChange={onChange} disabled={disabled} />
     </div>
     <div className="p-4 bg-blue-50 text-blue-800 rounded border border-blue-200 text-xs font-semibold flex items-start gap-3">
-      <div className="bg-blue-600 text-white rounded-full p-0.5 flex-shrink-0 mt-0.5"><Check size={12} strokeWidth={4} /></div>
+      <div className="bg-blue-600 text-white rounded-full p-0.5 shrink-0 mt-0.5"><Check size={12} strokeWidth={4} /></div>
       <p>Information provided here must be supported by original government certificates during the time of admission verification.</p>
     </div>
   </div>
@@ -1956,7 +2127,7 @@ const CollegeChoice = ({ data, onChange, onPrefChange, colleges, master, disable
             <span className="text-[10px] font-bold uppercase tracking-widest">Available Colleges</span>
             <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded">{filteredColleges.length} found</span>
           </div>
-          <div className="overflow-y-auto max-h-[420px] divide-y divide-slate-100">
+          <div className="overflow-y-auto max-h-105 divide-y divide-slate-100">
             {filteredColleges.length === 0 ? (
               <div className="py-10 text-center text-xs font-bold text-slate-400 uppercase tracking-wider italic">
                 No colleges match your filters
@@ -1968,7 +2139,7 @@ const CollegeChoice = ({ data, onChange, onPrefChange, colleges, master, disable
                 return (
                   <label key={c.ins_code}
                     className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-all ${disabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-slate-50'} ${isSelected ? 'bg-blue-50/60 border-l-2 border-blue-500' : ''}`}>
-                    <div className="flex-shrink-0 mt-0.5">
+                    <div className="shrink-0 mt-0.5">
                       <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'}`}>
                         {isSelected ? <Check size={12} strokeWidth={4} /> : null}
                       </div>
@@ -1995,7 +2166,7 @@ const CollegeChoice = ({ data, onChange, onPrefChange, colleges, master, disable
             <span className="text-[10px] font-bold uppercase tracking-widest">Your Priority List</span>
             <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded">{selectedCodes.length} selected</span>
           </div>
-          <div className="overflow-y-auto max-h-[420px]">
+          <div className="overflow-y-auto max-h-105">
             {selectedCodes.length === 0 ? (
               <div className="py-10 text-center text-xs font-bold text-slate-400 uppercase tracking-wider italic">
                 Check colleges on the left to add them here
@@ -2007,7 +2178,7 @@ const CollegeChoice = ({ data, onChange, onPrefChange, colleges, master, disable
                   if (!c) return null;
                   return (
                     <div key={code} className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 transition-all">
-                      <div className="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">
+                      <div className="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shrink-0">
                         {idx + 1}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -2019,7 +2190,7 @@ const CollegeChoice = ({ data, onChange, onPrefChange, colleges, master, disable
                         <p className="text-[10px] font-bold text-slate-400 mt-0.5">{c.ins_city}</p>
                       </div>
                       {!disabled && (
-                        <div className="flex flex-col gap-0.5 flex-shrink-0">
+                        <div className="flex flex-col gap-0.5 shrink-0">
                           <button type="button" onClick={() => moveUp(idx)} disabled={idx === 0}
                             className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-colors text-xs font-black">▲</button>
                           <button type="button" onClick={() => moveDown(idx)} disabled={idx === selectedCodes.length - 1}
@@ -2057,17 +2228,17 @@ const DocumentUploads = ({ data, onUpload, onPreview, disabled }) => {
         File Size Disclaimer: Minimum 150 KB and Maximum 5 MB per document.
       </p>
       <p className="text-[10px] font-semibold text-amber-700 mt-1">
-        Files outside this size range will not be uploaded. Supported formats remain as shown for each document type.
+        Files outside this size range will not be uploaded. Supported formats: {COMMON_UPLOAD_LABEL}.
       </p>
     </div>
     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <UploadBox label="Passport Photo" subLabel="Mandatory • JPG/PNG" docType="photo" currentPath={data.photoPath} onUpload={onUpload} onPreview={onPreview} accept="image/*" disabled={disabled} />
-      <UploadBox label="SSLC marksheet" subLabel="10th / SSLC scan" docType="marksheet" currentPath={data.marksheetPath} onUpload={onUpload} onPreview={onPreview} accept=".pdf,.jpg,.jpeg,.png" disabled={disabled} />
+      <UploadBox label="Passport Photo" subLabel={`Mandatory • ${COMMON_UPLOAD_LABEL}`} docType="photo" currentPath={data.photoPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
+      <UploadBox label="SSLC marksheet" subLabel={`10th / SSLC scan • ${COMMON_UPLOAD_LABEL}`} docType="marksheet" currentPath={data.marksheetPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
       {needSecondMs && (
-        <UploadBox label={secondLabel} subLabel="Mandatory • PDF / Image" docType="marksheetQualifying" currentPath={data.qualifyingMarksheetPath} onUpload={onUpload} onPreview={onPreview} accept=".pdf,.jpg,.jpeg,.png" disabled={disabled} />
+        <UploadBox label={secondLabel} subLabel={`Mandatory • ${COMMON_UPLOAD_LABEL}`} docType="marksheetQualifying" currentPath={data.qualifyingMarksheetPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
       )}
-      <UploadBox label="Transfer Certificate" subLabel="PDF / Image" docType="tc" currentPath={data.tcPath} onUpload={onUpload} onPreview={onPreview} accept=".pdf,.jpg,.jpeg,.png" disabled={disabled} />
-      <UploadBox label="Community Cert." subLabel="Optional for OC" docType="community" currentPath={data.communityPath} onUpload={onUpload} onPreview={onPreview} accept=".pdf,.jpg,.jpeg,.png" disabled={disabled} />
+      <UploadBox label="Transfer Certificate" subLabel={`PDF / Image / Document • ${COMMON_UPLOAD_LABEL}`} docType="tc" currentPath={data.tcPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
+      <UploadBox label="Community Cert." subLabel={`Optional for OC • ${COMMON_UPLOAD_LABEL}`} docType="community" currentPath={data.communityPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
     </div>
     <div className="p-6 bg-slate-50 border border-slate-200 rounded">
       <div className="flex gap-4">
@@ -2107,7 +2278,7 @@ const UploadBox = ({ label, subLabel, docType, currentPath, onUpload, onPreview,
     <div className="group relative">
       <div 
         onClick={() => !uploading && !disabled && !currentPath && inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-4 transition-all min-h-[160px] overflow-hidden relative
+        className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-4 transition-all min-h-40 overflow-hidden relative
           ${disabled ? 'cursor-not-allowed opacity-50 bg-slate-50' : !currentPath ? 'cursor-pointer hover:border-blue-400 hover:bg-blue-50/50' : 'bg-white'}
           ${currentPath ? 'border-emerald-500 shadow-sm' : 'border-slate-200 bg-slate-50/50'}`}
       >
@@ -2143,7 +2314,7 @@ const UploadBox = ({ label, subLabel, docType, currentPath, onUpload, onPreview,
 
         {/* Action Overlay (Professional View/Replace) */}
         {currentPath && !uploading && !disabled && (
-          <div className="absolute inset-0 bg-blue-950/80 backdrop-blur-[4px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-3 z-20 px-4">
+          <div className="absolute inset-0 bg-blue-950/80 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-3 z-20 px-4">
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onPreview(currentPath); }}
@@ -2170,7 +2341,7 @@ const PreviewModal = ({ url, onClose }) => {
   const isImage = url?.match(/\.(jpg|jpeg|png|webp|gif)$/i);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
@@ -2196,7 +2367,7 @@ const PreviewModal = ({ url, onClose }) => {
           </button>
         </div>
         
-        <div className="flex-1 overflow-auto bg-slate-50 p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex-1 overflow-auto bg-slate-50 p-6 flex items-center justify-center min-h-100">
           {isImage ? (
             <img src={url} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
           ) : (
@@ -2252,7 +2423,7 @@ const EducationHistory = ({ eduHistory, setEduHistory, onDistrictChange, master,
       </div>
 
       <div className="overflow-x-auto border border-slate-300 rounded-lg bg-slate-50/30">
-        <table className="w-full text-left border-collapse min-w-[600px]">
+        <table className="w-full text-left border-collapse min-w-150">
           <thead>
             <tr className="bg-slate-100 border-b border-slate-300">
               <th className="px-4 py-2 text-[10px] font-bold text-slate-800 border-r border-slate-300">Standard</th>
@@ -2305,19 +2476,21 @@ const EducationHistory = ({ eduHistory, setEduHistory, onDistrictChange, master,
   );
 };
 
-const EducationSelector = ({ selectedType, setQualifyingType, allowedTypes, disabled }) => {
-  const tabs = (allowedTypes && allowedTypes.length ? allowedTypes : ['SSLC', 'ITI', 'VOC', 'HSC']);
-  const gridClass = tabs.length === 1 ? 'grid-cols-1 max-w-xs' : tabs.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4';
+const EducationSelector = ({ selectedType, setQualifyingType, tabConfig, disabled }) => {
+  const tabs = (tabConfig && tabConfig.length ? tabConfig : MARK_TAB_ORDER.map(type => ({ type, enabled: true })));
+  const gridClass = 'grid-cols-2 md:grid-cols-4';
   return (
     <div className={`grid gap-3 mb-8 ${gridClass}`}>
-      {tabs.map((type) => (
+      {tabs.map(({ type, enabled }) => (
         <button
           key={type}
           type="button"
-          disabled={disabled}
-          onClick={() => setQualifyingType(type.toLowerCase())}
+          disabled={disabled || !enabled}
+          onClick={() => enabled && setQualifyingType(type.toLowerCase())}
           className={`px-4 py-3 rounded border font-bold text-xs uppercase tracking-widest transition-all
-            ${selectedType === type.toLowerCase()
+            ${!enabled
+              ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
+              : selectedType === type.toLowerCase()
               ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-100'
               : 'bg-slate-50 text-slate-500 border-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600'}`}
         >
@@ -2329,20 +2502,18 @@ const EducationSelector = ({ selectedType, setQualifyingType, allowedTypes, disa
 };
 
 const AttemptManager = ({ type, attempts, setAttempts, selectedAttempts, setSelectedAttempts, disabled }) => {
-  const toggleAttempt = (id) => {
-    if (disabled || id === 1) return;
-    const typeKey = type.toUpperCase();
-    const current = selectedAttempts[typeKey] || [1];
-    if (current.includes(id)) {
-      setSelectedAttempts({ ...selectedAttempts, [typeKey]: current.filter(a => a !== id) });
-    } else {
-      setSelectedAttempts({ ...selectedAttempts, [typeKey]: [...current, id].sort() });
-    }
+  const typeKey = type.toUpperCase();
+  const currentSelected = selectedAttempts[typeKey] || [];
+  const currentCount = currentSelected.length;
+
+  const setAttemptCount = (count) => {
+    if (disabled) return;
+    const nextSelected = count > 0 ? Array.from({ length: count }, (_, i) => i + 1) : [];
+    setSelectedAttempts({ ...selectedAttempts, [typeKey]: nextSelected });
   };
 
   const updateAttemptData = (id, field, value) => {
     if (disabled) return;
-    const typeKey = type.toUpperCase();
     const typeAtts = attempts[typeKey] || {};
     setAttempts({
       ...attempts,
@@ -2353,25 +2524,33 @@ const AttemptManager = ({ type, attempts, setAttempts, selectedAttempts, setSele
     });
   };
 
-  const currentSelected = selectedAttempts[type.toUpperCase()] || [1];
-
   return (
     <div className="space-y-6 mt-8 pt-8 border-t border-slate-200">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mark Attempt Tracking</h4>
-          <p className="text-xs text-slate-600 font-medium italic mt-1">Select all attempts you have taken for this qualification.</p>
+          <p className="text-xs text-slate-600 font-medium italic mt-1">Optional. Choose how many attempts you want to enter. Leave it blank if there are no attempts to report.</p>
         </div>
         <div className="flex gap-2">
           {[1, 2, 3, 4, 5].map(id => (
-            <label key={id} className={`flex items-center gap-2 px-3 py-1.5 rounded border cursor-pointer transition-all ${id === 1 ? 'opacity-50' : ''} ${currentSelected.includes(id) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-blue-300 hover:bg-blue-50/50'}`}>
-              <input type="checkbox" checked={currentSelected.includes(id)} onChange={() => toggleAttempt(id)} disabled={disabled || id === 1} className="hidden" />
+            <label key={id} className={`flex items-center gap-2 px-3 py-1.5 rounded border cursor-pointer transition-all ${currentCount === id ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-blue-300 hover:bg-blue-50/50'}`}>
+              <input type="radio" name={`${typeKey}-attempt-count`} checked={currentCount === id} onChange={() => setAttemptCount(id)} disabled={disabled} className="hidden" />
               <span className="text-[10px] font-black uppercase">Att {id}</span>
             </label>
           ))}
+          {currentCount > 0 && !disabled && (
+            <button
+              type="button"
+              onClick={() => setAttemptCount(0)}
+              className="px-3 py-1.5 rounded border border-slate-200 bg-white text-slate-500 text-[10px] font-black uppercase tracking-widest hover:border-red-300 hover:text-red-600 transition-all"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
+      {currentSelected.length > 0 && (
       <div className="space-y-4">
         {currentSelected.map(id => (
           <div key={id} className="p-6 border border-slate-200 rounded-lg bg-slate-50/30">
@@ -2404,6 +2583,7 @@ const AttemptManager = ({ type, attempts, setAttempts, selectedAttempts, setSele
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 };

@@ -10,13 +10,24 @@ const Toast = ({ message, type = 'success', onClose }) => {
     return () => clearTimeout(timer);
   }, [onClose]);
 
+  const isError = type === 'error';
+  const bgColor = isError ? 'bg-red-500' : 'bg-emerald-500';
+  const shadowColor = isError ? 'shadow-red-200' : 'shadow-emerald-200';
+  const progressColor = isError ? 'bg-red-500' : 'bg-emerald-500';
+
   return (
-    <div className="fixed top-6 right-6 z-[100] flex flex-col pointer-events-auto">
-      <div className="bg-white border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.08)] rounded-xl p-4 flex items-center gap-4 min-w-[340px] relative overflow-hidden animate-in slide-in-from-right-full fade-in duration-500">
-        <div className="shrink-0 w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
+    <div className="fixed top-6 right-6 z-100 flex flex-col pointer-events-auto">
+      <div className="bg-white border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.08)] rounded-xl p-4 flex items-center gap-4 min-w-85 relative overflow-hidden animate-in slide-in-from-right-full fade-in duration-500">
+        <div className={`shrink-0 w-10 h-10 rounded-full ${bgColor} flex items-center justify-center text-white shadow-lg ${shadowColor}`}>
+          {isError ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
         </div>
         <div className="flex-1">
           <p className="text-[15px] font-semibold text-gray-700">{message}</p>
@@ -29,7 +40,7 @@ const Toast = ({ message, type = 'success', onClose }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <div className="absolute bottom-0 left-0 h-1.5 bg-emerald-500 w-full animate-progress-shrink origin-left"></div>
+        <div className={`absolute bottom-0 left-0 h-1.5 ${progressColor} w-full animate-progress-shrink origin-left`}></div>
       </div>
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes progress-shrink {
@@ -44,7 +55,11 @@ const Toast = ({ message, type = 'success', onClose }) => {
   );
 };
 
-const ADMISSION_OPTIONS = ['First Year', 'Lateral Entry', 'Part Time'];
+const ADMISSION_OPTIONS = [
+  { label: 'First Year', value: 'First Year' },
+  { label: 'Lateral Entry', value: 'Lateral Entry' },
+  { label: 'Part Time', value: 'Part Time' }
+];
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -85,7 +100,7 @@ const Register = () => {
       setToast({ message: 'Enter a valid 10-digit mobile number', type: 'error' });
       return;
     }
-    if (!ADMISSION_OPTIONS.includes(formData.admissionType)) {
+    if (!ADMISSION_OPTIONS.some(opt => opt.value === formData.admissionType)) {
       setToast({ message: 'Please select a valid admission category', type: 'error' });
       return;
     }
@@ -128,9 +143,9 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 py-10 relative overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-blue-50">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 py-10 relative overflow-hidden bg-linear-to-br from-indigo-50 via-white to-blue-50">
       
-      {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <button 
         onClick={() => navigate('/')}
@@ -169,19 +184,23 @@ const Register = () => {
               <p className="text-[11px] text-slate-400 px-1">Use the same email or mobile when you log in.</p>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wide px-1">Admission category</label>
-              <select
-                name="admissionType"
-                value={formData.admissionType}
-                onChange={handleInputChange}
-                className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-4 pr-4 text-sm font-medium outline-none focus:border-blue-300 transition-all text-slate-800"
-              >
-                <option value="">Select one…</option>
+              <div className="grid grid-cols-3 gap-2">
                 {ADMISSION_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
+                  <label key={opt.value} className="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-all" style={{backgroundColor: formData.admissionType === opt.value ? '#f0f9ff' : 'transparent', borderColor: formData.admissionType === opt.value ? '#3b82f6' : '#e2e8f0'}}>
+                    <input
+                      type="radio"
+                      name="admissionType"
+                      value={opt.value}
+                      checked={formData.admissionType === opt.value}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 cursor-pointer accent-blue-600"
+                    />
+                    <span className="text-sm font-medium text-slate-700">{opt.label}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -195,7 +214,7 @@ const Register = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium py-2.5 rounded-lg shadow-md transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 mt-2 text-sm uppercase tracking-wide">
+            <button type="submit" disabled={isLoading} className="w-full bg-linear-to-r from-blue-600 to-indigo-600 text-white font-medium py-2.5 rounded-lg shadow-md transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 mt-2 text-sm uppercase tracking-wide">
               {isLoading ? 'Creating Account...' : 'Setup Account'}
             </button>
           </form>

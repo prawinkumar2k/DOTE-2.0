@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Printer,
   FileBadge,
-  BadgeIndianRupee,
+  IndianRupee,
 } from 'lucide-react';
 
 /** Same rule as ApplicationForm — these communities submit from step 9 without visiting this page. */
@@ -90,7 +90,7 @@ function PaymentReceiptBlock({
 }) {
   return (
     <div className="print-shadow rounded-2xl border border-slate-200 bg-white overflow-hidden print:border-0 print:shadow-none">
-      <div className="bg-gradient-to-r from-[#0a4d68] to-[#088395] px-6 py-4 text-white flex items-center justify-between gap-4">
+      <div className="bg-linear-to-r from-[#0a4d68] to-[#088395] px-6 py-4 text-white flex items-center justify-between gap-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.25em] text-teal-100/90">
             Payment successful
@@ -310,7 +310,7 @@ const StudentPayment = () => {
         </Link>
 
         {/* Gateway-style top bar */}
-        <div className="rounded-t-2xl bg-gradient-to-r from-[#063251] via-[#0a4d68] to-[#088395] px-5 py-4 md:px-8 flex flex-wrap items-center justify-between gap-4 text-white print:hidden">
+        <div className="rounded-t-2xl bg-linear-to-r from-[#063251] via-[#0a4d68] to-[#088395] px-5 py-4 md:px-8 flex flex-wrap items-center justify-between gap-4 text-white print:hidden">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
               <Lock size={22} className="text-teal-200" />
@@ -349,7 +349,7 @@ const StudentPayment = () => {
                 <div className="rounded-2xl bg-slate-900 text-white p-5 mb-6">
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total</span>
-                    <BadgeIndianRupee className="text-teal-400 shrink-0" size={22} />
+                    <IndianRupee className="text-teal-400 shrink-0" size={22} />
                   </div>
                   <p className="text-3xl font-black tracking-tight mb-2">{feeLabel}</p>
                   <p className="text-xs text-slate-400 leading-relaxed">
@@ -390,7 +390,7 @@ const StudentPayment = () => {
                       key={id}
                       type="button"
                       onClick={() => setMethod(id)}
-                      className={`flex flex-col items-start text-left p-3 rounded-xl border-2 transition-all min-h-[88px] ${
+                      className={`flex flex-col items-start text-left p-3 rounded-xl border-2 transition-all min-h-22 ${
                         method === id
                           ? 'border-[#088395] bg-teal-50/90 shadow-md'
                           : 'border-slate-200 bg-white hover:border-slate-300'
@@ -537,7 +537,7 @@ const StudentPayment = () => {
                   type="button"
                   onClick={handleSimulatedPay}
                   disabled={paying}
-                  className="mt-8 w-full py-4 rounded-xl font-black uppercase tracking-[0.12em] text-xs bg-gradient-to-r from-[#0a4d68] to-[#088395] text-white hover:brightness-105 border border-teal-700/30 shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 transition-all active:scale-[0.995]"
+                  className="mt-8 w-full py-4 rounded-xl font-black uppercase tracking-[0.12em] text-xs bg-linear-to-r from-[#0a4d68] to-[#088395] text-white hover:brightness-105 border border-teal-700/30 shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 transition-all active:scale-[0.995]"
                 >
                   {paying ? (
                     <>

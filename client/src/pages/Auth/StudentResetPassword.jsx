@@ -50,7 +50,7 @@ const StudentResetPassword = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 py-10">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-linear-to-br from-blue-50 via-white to-indigo-50 p-4 py-10">
       <Link
         to="/login"
         className="absolute left-6 top-6 z-50 flex items-center gap-2 rounded-xl border border-gray-100 bg-white/80 px-4 py-2 text-sm font-bold uppercase tracking-wider text-gray-600 shadow-sm backdrop-blur-md hover:bg-white"
@@ -118,7 +118,7 @@ const StudentResetPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
+              className="w-full rounded-lg bg-linear-to-r from-blue-600 to-blue-700 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
             >
               {loading ? 'Saving…' : 'Update password'}
             </button>

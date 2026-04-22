@@ -43,7 +43,15 @@ const findStudentByLoginIdentifier = async (identifier) => {
   return row || null;
 };
 
-const STUDENT_ADMISSION_TYPES = ['First Year', 'Lateral-1[12]', 'Lateral-2[ITI]', 'Part Time'];
+const STUDENT_ADMISSION_TYPES = ['First Year', 'Lateral Entry', 'Part Time'];
+
+const normalizeAdmissionType = (value) => {
+  const raw = value != null ? String(value).trim() : '';
+  if (raw === 'Lateral-1[12]' || raw === 'Lateral-2[ITI]' || raw === 'Lateral Entry (2nd Year)') {
+    return 'Lateral Entry';
+  }
+  return raw;
+};
 
 const register = async (req, res) => {
   try {
@@ -81,7 +89,7 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     if (role === 'student') {
-      const admissionTrim = admissionType != null ? String(admissionType).trim() : '';
+      const admissionTrim = normalizeAdmissionType(admissionType);
       if (!admissionTrim || !STUDENT_ADMISSION_TYPES.includes(admissionTrim)) {
         return res.status(400).json({ message: 'Please select a valid admission category' });
       }

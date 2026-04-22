@@ -10,13 +10,24 @@ const Toast = ({ message, type = 'success', onClose }) => {
     return () => clearTimeout(timer);
   }, [onClose]);
 
+  const isError = type === 'error';
+  const bgColor = isError ? 'bg-red-500' : 'bg-emerald-500';
+  const shadowColor = isError ? 'shadow-red-200' : 'shadow-emerald-200';
+  const progressColor = isError ? 'bg-red-500' : 'bg-emerald-500';
+
   return (
-    <div className="fixed top-6 right-6 z-[100] flex flex-col pointer-events-auto">
-      <div className="bg-white border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.08)] rounded-xl p-4 flex items-center gap-4 min-w-[340px] relative overflow-hidden animate-in slide-in-from-right-full fade-in duration-500">
-        <div className="shrink-0 w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
+    <div className="fixed top-6 right-6 z-100 flex flex-col pointer-events-auto">
+      <div className="bg-white border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.08)] rounded-xl p-4 flex items-center gap-4 min-w-85 relative overflow-hidden animate-in slide-in-from-right-full fade-in duration-500">
+        <div className={`shrink-0 w-10 h-10 rounded-full ${bgColor} flex items-center justify-center text-white shadow-lg ${shadowColor}`}>
+          {isError ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
         </div>
         <div className="flex-1">
           <p className="text-[15px] font-semibold text-gray-700">{message}</p>
@@ -30,7 +41,7 @@ const Toast = ({ message, type = 'success', onClose }) => {
           </svg>
         </button>
         {/* Progress Bar */}
-        <div className="absolute bottom-0 left-0 h-1.5 bg-emerald-500 w-full animate-progress-shrink origin-left"></div>
+        <div className={`absolute bottom-0 left-0 h-1.5 ${progressColor} w-full animate-progress-shrink origin-left`}></div>
       </div>
       
       <style dangerouslySetInnerHTML={{ __html: `
@@ -111,7 +122,7 @@ const Login = () => {
 
       if (response.data.success) {
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        setToast({ message: `Welcome back, ${response.data.user.name}! Redirecting...`, type: 'success' });
+        setToast({ message: `Welcome, ${response.data.user.name}! Redirecting...`, type: 'success' });
         setTimeout(() => navigate(config.target), 1200);
       }
     } catch (err) {
@@ -152,9 +163,9 @@ const Login = () => {
   };
 
   return (
-    <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 py-10 relative overflow-hidden bg-gradient-to-br transition-all duration-700 ease-in-out ${config.bgColor}`}>
+    <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 py-10 relative overflow-hidden bg-linear-to-br transition-all duration-700 ease-in-out ${config.bgColor}`}>
       
-      {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Home Navigation Button */}
       <button 
@@ -269,7 +280,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={forgotLoading}
-                className={`w-full bg-gradient-to-r ${config.gradient} text-white font-semibold py-2.5 rounded-lg shadow-sm transition-all duration-300 disabled:opacity-70 text-sm tracking-wide`}
+                className={`w-full bg-linear-to-r ${config.gradient} text-white font-semibold py-2.5 rounded-lg shadow-sm transition-all duration-300 disabled:opacity-70 text-sm tracking-wide`}
               >
                 {forgotLoading ? 'Sending…' : 'Send reset link'}
               </button>
@@ -348,7 +359,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full bg-gradient-to-r ${config.gradient} text-white font-semibold py-2.5 rounded-lg shadow-sm transition-all duration-300 disabled:opacity-70 text-sm tracking-wide`}
+                className={`w-full bg-linear-to-r ${config.gradient} text-white font-semibold py-2.5 rounded-lg shadow-sm transition-all duration-300 disabled:opacity-70 text-sm tracking-wide`}
               >
                 {isLoading ? 'Verifying...' : 'Login to Account'}
               </button>

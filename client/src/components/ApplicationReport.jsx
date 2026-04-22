@@ -326,68 +326,6 @@ const ApplicationReport = ({ data, colleges = [], headerActions = null }) => {
             </div>
           </div>
         </div>
-
-        {/* PAGE 4: DECLARATION */}
-        <div className="p-[1.5cm] border border-slate-100 mb-8 print:mb-0 print:border-none print:p-0 page-break bg-white">
-          <div className="text-center font-bold uppercase text-[16px] mb-10 border-b-2 border-black pb-4">DECLARATION BY THE APPLICANT</div>
-          
-          <div className="text-[13px] space-y-6 leading-relaxed">
-            <p className="uppercase text-justify">
-              I, {s.student_name} SON / DAUGHTER OF {s.father_name} HEREBY SOLEMNLY DECLARE THAT THE INFORMATION FURNISHED IN THE
-              STATEMENTS GIVEN IN THE APPLICATION AND THE ENCLOSURES ARE TRUE, CORRECT AND COMPLETE. FALSE INFORMATION WILL LEAD TO CANCELLATION OF
-              ADMISSION AND CRIMINAL ACTION.
-            </p>
-            
-            <div className="flex justify-between pt-4">
-              <div className="space-y-2">
-                <p>Place :</p>
-                <p>Date :</p>
-              </div>
-              <div className="text-center font-bold uppercase pt-8">
-               <div className="border-t border-black w-48 mb-1"></div>
-                (SIGNATURE OF APPLICANT)
-              </div>
-            </div>
-
-            <div className="pt-8 space-y-4">
-              <p className="font-bold text-[14px]">Note:</p>
-              <ol className="list-decimal pl-6 space-y-3">
-                <li>Please do not enclose Original Certificates and enclose Photo copies of the Mark Sheet and Community Certificate along with the Application Form Eligibility Rules, Selection Procedure etc., or contact respective Polytechnic Principals for details</li>
-                <li>Application for Sponsored Quota Sandwich Courses should be sent to the respective Polytechnic College.</li>
-              </ol>
-            </div>
-
-            {/* Tamil Declaration */}
-            <div className="pt-12 space-y-6">
-              <p className="font-bold text-[15px] leading-snug text-justify">
-                நான் {s.student_name}(முழு பெயர்) தந்தை பெயர் {s.father_name} தெரிவிப்பது யாதெனில் விண்ணப்பத்தில் நிரப்பப்பட்ட 
-                தகவல்கள் மற்றும் இதனுடன் இணைக்கப்பட்டுள்ள இணைப்புகள் அனைத்தும் உண்மையானவை மற்றும் சரியானவை என்று உறுதி 
-                அளிக்கிறேன். மேலும் விவரங்கள் பொய்யானவை என்று தெரியவந்தால் எனது சேர்க்கையை ரத்து செய்யவும், என் மீது குற்ற வழக்கு 
-                தொடரவும் இதன் மூலம் சம்மதம் தெரிவிக்கிறேன்.
-              </p>
-              
-              <div className="flex justify-between pt-4">
-                <div className="space-y-2">
-                  <p>இடம் :</p>
-                  <p>நாள் :</p>
-                </div>
-                <div className="text-center font-bold pt-8">
-                  <div className="border-t border-black w-48 mb-1"></div>
-                  விண்ணப்பதாரரின் கையொப்பம்
-                </div>
-              </div>
-
-              <div className="pt-8 space-y-4">
-                <p className="font-bold text-[14px]">குறிப்பு:</p>
-                <ol className="list-decimal pl-6 space-y-3">
-                  <li>விண்ணப்பங்களுடன் மதிப்பெண் பட்டியல் மற்றும் சாதி சான்றிதழ் நகல்கள் மட்டும் இணைத்தால் போதுமானது.</li>
-                  <li>தொழில் பயிற்சியுடன் கூடிய பட்டய படிப்பிற்கு விண்ணப்பங்களை சம்மந்தப்பட்ட கல்லூரியின் முதல்வர்களுக்கு அனுப்ப வேண்டும்.</li>
-                </ol>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* PAGE 5: PAYMENT RECEIPT */}
         <div className="p-[1.5cm] border border-slate-100 mb-8 print:mb-0 print:border-none print:p-0 page-break bg-white">
           {/* Header */}

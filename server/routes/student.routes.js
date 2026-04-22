@@ -23,7 +23,8 @@ const storage = multer.diskStorage({
       'tc': 'tc',
       'marksheet': 'marksheet',
       'marksheetQualifying': 'qualmarksheet',
-      'community': 'community'
+      'community': 'community',
+      'experience': 'experience'
     };
     
     const abbreviation = typeMap[docType] || docType;
@@ -37,10 +38,10 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
+    const allowed = ['.jpg', '.jpeg', '.pdf'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowed.includes(ext)) cb(null, true);
-    else cb(new Error('Only JPG, PNG, PDF files are allowed'));
+    else cb(new Error('Invalid file size/type'));
   },
 });
 

@@ -198,7 +198,7 @@ const getStudentApplicationReport = async (req, res) => {
       student.email && student.communication_address ? 1 : 0,
       student.father_name && student.mother_name ? 1 : 0,
       student.last_institution_board && student.last_institution_name ? 1 : 0,
-      marks && (marks.sslc_att1_register_no || marks.hsc_att1_register_no || marks.iti_att1_register_no || marks.voc_att1_register_no) ? 1 : 0,
+      marks && (marks.sslc_att1_register_no || marks.hsc_att1_register_no || marks.iti_att1_register_no) ? 1 : 0,
       student.differently_abled !== null ? 1 : 0,
       student.college_choices ? 1 : 0,
       student.photo ? 1 : 0,

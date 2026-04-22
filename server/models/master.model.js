@@ -2,7 +2,7 @@ const db = require('../config/db.config');
 
 const Master = {
   getAllReligions: async () => {
-    const [rows] = await db.query('SELECT id, religion_name FROM religion_master ORDER BY religion_name');
+    const [rows] = await db.query('SELECT id, religion AS religion_name FROM religion_master ORDER BY religion');
     return rows;
   },
 

@@ -7,7 +7,7 @@ const Application = {
   },
 
   upsertMarks: async (studentId, data) => {
-    const validQualifiers = ['sslc', 'hsc', 'iti', 'voc'];
+    const validQualifiers = ['sslc', 'hsc', 'iti'];
 
     // Strict filter: Key must be a flag (e.g., 'hsc') or start with a prefix (e.g., 'hsc_')
     const entries = Object.entries(data).filter(([key]) => {

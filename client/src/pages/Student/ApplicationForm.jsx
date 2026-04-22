@@ -33,9 +33,9 @@ const fieldLabels = {
   lastInstitute: 'Last Institute Name', hscRegisterNo: 'HSC Register Number',
   sslcRegisterNo: 'SSLC Register Number', sslcMarksheetNo: 'SSLC Marksheet Number',
   mediumOfInstruction: 'Medium of Instruction', civicSchoolType: 'Civic School Type',
-  photoPath: 'Passport Photo', tcPath: 'Transfer Certificate', marksheetPath: 'SSLC marksheet',
-  qualifyingMarksheetPath: 'HSC / ITI marksheet',
-  communityPath: 'Community Certificate'
+  photoPath: 'Passport Photo', tcPath: 'Transfer Certificate', marksheetPath: 'Qualifying Marksheet',
+  qualifyingMarksheetPath: 'Additional Marksheet',
+  communityPath: 'Community Certificate', experiencePath: 'Experience Certificate'
 };
 
 const stepRequiredFields = {
@@ -46,7 +46,7 @@ const stepRequiredFields = {
   5: ['qualifyingType'],
   6: [], // Optional booleans
   7: [], // At least 1 pref checked in validator
-  8: ['photoPath', 'marksheetPath'] // Minimum mandatory uploads
+  8: ['photoPath', 'marksheetPath', 'communityPath', 'tcPath'] // Minimum mandatory uploads
 };
 
 const defaultForm = {
@@ -56,29 +56,29 @@ const defaultForm = {
   citizenship: '', civicNative: '',
   // Step 2
   mobile: '', email: '', alternateMobile: '', commAddress: '', permAddress: '', sameAsComm: false,
+  fatherName: '', motherName: '', parentOccupation: '', annualIncome: '',
   // Step 4 Merged
   mediumOfInstruction: '', civicSchoolType: '',
   qualifyingBoard: '', registerNumber: '', lastInstitute: '', lastInstituteDistrict: '', lastInstituteState: '',
   // Comma-separated Education History
   standard_studied: '', standard_school_name: '', standard_yop: '', standard_district: '', standard_state: '',
   // Step 5
-  qualifyingType: 'sslc',
+  qualifyingType: '',
   // Step 7+
   isDifferentlyAbled: false, isExServiceman: false, isSportsPerson: false, isGovtStudent: false,
   hostelRequired: false, womensHostel: false, preferences: [],
-  photoPath: '', tcPath: '', marksheetPath: '', qualifyingMarksheetPath: '', communityPath: '',
+  photoPath: '', tcPath: '', marksheetPath: '', qualifyingMarksheetPath: '', communityPath: '', experiencePath: '',
 };
 
 import FormField from '../../components/Common/FormField';
 
 const SUBJECT_CONFIG = {
-  SSLC: { count: 5, subjects: ['Tamil', 'English', 'Maths', 'Science', 'Social'] },
-  ITI: { count: 5, subjects: ['Trade Practical', 'Trade Theory', 'Work Shop', 'Drawing', 'Social'] },
-  VOC: { count: 6, subjects: ['Language', 'English', 'Maths', 'Theory', 'Practical-I', 'Practical-II'] },
-  HSC: { count: 6, subjects: ['Tamil', 'English', 'Maths', 'Physics', 'Chemistry', 'Biology'] }
+  SSLC: { count: 5, subjects: ['Tamil', 'English', 'Maths', 'Science', 'Social Science'], maxPerSubject: 100 },
+  HSC: { count: 6, subjects: ['Tamil', 'English', 'Maths', 'Physics', 'Chemistry', 'Biology / CS'], maxPerSubject: 100 },
+  ITI: { count: 7, subjects: ['Trade Theory', 'Trade Practical', 'Engineering Drawing', 'Workshop Calc. & Science', 'Employability Skills', 'Social Studies', 'Environmental Education'], maxPerSubject: 100, optionalFrom: 6 }
 };
 
-const MARK_TAB_ORDER = ['SSLC', 'HSC', 'ITI', 'VOC'];
+const MARK_TAB_ORDER = ['SSLC', 'HSC', 'ITI'];
 
 const normalizeAdmissionType = (value) => {
   const raw = value != null ? String(value).trim() : '';
@@ -126,8 +126,32 @@ function communityApplicationFeeInr(community, master) {
 
 /** SC / SCA / ST: always zero fee on the portal (direct submit). Others use fees_master + default. */
 const STATUTORY_NO_FEE_COMMUNITIES = ['SC', 'SCA', 'ST'];
-const COMMON_UPLOAD_ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx';
-const COMMON_UPLOAD_LABEL = 'PDF / JPG / JPEG / PNG / WEBP / DOC / DOCX';
+const COMMON_UPLOAD_ACCEPT = '.pdf,.jpg,.jpeg';
+const COMMON_UPLOAD_LABEL = 'PDF / JPG / JPEG';
+
+const getDocumentProfile = (data) => {
+  const raw = normalizeAdmissionType(data?.qualifyingType || data?.admissionType || '');
+  const upper = raw.toUpperCase();
+  if (['ITI', 'HSC', 'SSLC'].includes(upper)) return upper;
+  return 'SSLC';
+};
+
+const getDocumentRequirements = (data) => {
+  const profile = getDocumentProfile(data);
+  const marksheetLabel = profile === 'ITI' ? 'ITI marksheet' : profile === 'HSC' ? 'HSC marksheet' : 'SSLC marksheet';
+  const docs = [
+    { key: 'photoPath', docType: 'photo', label: 'Passport Photo', subLabel: `Mandatory • ${COMMON_UPLOAD_LABEL}` },
+    { key: 'marksheetPath', docType: 'marksheet', label: marksheetLabel, subLabel: `Mandatory • ${COMMON_UPLOAD_LABEL}` },
+    { key: 'communityPath', docType: 'community', label: 'Community Certificate', subLabel: `Mandatory • ${COMMON_UPLOAD_LABEL}` },
+    { key: 'tcPath', docType: 'tc', label: 'Transfer Certificate', subLabel: `Mandatory • ${COMMON_UPLOAD_LABEL}` },
+  ];
+
+  if (profile === 'ITI') {
+    docs.push({ key: 'experiencePath', docType: 'experience', label: 'Experience Certificate', subLabel: `Mandatory • ${COMMON_UPLOAD_LABEL}` });
+  }
+
+  return { profile, docs };
+};
 
 function payableApplicationFeeInr(community, master) {
   const c = (community || '').trim().toUpperCase();
@@ -141,9 +165,13 @@ const getAdmissionAllowedMarkTabs = (admissionType) => {
     .map(tab => tab.type);
 };
 
-/** Second marksheet upload only for lateral entry (SSLC + one other board), not Part Time with all tabs */
-const admissionRequiresSecondMarksheetUpload = (admissionType) => {
-  return isLateralEntryAdmission(admissionType);
+const hasEnteredMarks = (typeData) => {
+  return typeData?.subjects?.some(s => s?.obtained !== undefined && s?.obtained !== '' && Number(s.obtained) >= 0);
+};
+
+const getLockedQualifyingType = (admissionType, marksData) => {
+  const tabs = getAdmissionAllowedMarkTabs(admissionType);
+  return tabs.find((tab) => hasEnteredMarks(marksData?.[tab])) || '';
 };
 
 const ApplicationForm = () => {
@@ -160,15 +188,14 @@ const ApplicationForm = () => {
   const [marksData, setMarksData] = useState({
     SSLC: { subjects: [] },
     ITI: { subjects: [] },
-    HSC: { subjects: [] },
-    VOC: { subjects: [] }
+    HSC: { subjects: [] }
   });
   const [attempts, setAttempts] = useState({
     SSLC: { 1: { marksheetNo: "", registerNo: "", month: "", year: "", totalMatch: "" } },
-    ITI: { 1: {} }, HSC: { 1: {} }, VOC: { 1: {} }
+    ITI: { 1: {} }, HSC: { 1: {} }
   });
   const [selectedAttempts, setSelectedAttempts] = useState({
-    SSLC: [], ITI: [], HSC: [], VOC: []
+    SSLC: [], ITI: [], HSC: []
   });
   const [previewUrl, setPreviewUrl] = useState(null);
 
@@ -181,6 +208,7 @@ const ApplicationForm = () => {
     () => payableApplicationFeeInr(formData.community, master),
     [formData.community, master]
   );
+  const lockedQualifyingType = getLockedQualifyingType(formData.admissionType, marksData);
 
   useEffect(() => {
     Promise.all([loadSavedData(), loadMaster(), loadColleges()])
@@ -199,7 +227,6 @@ const ApplicationForm = () => {
     else if (board?.includes('icse')) subjects = master.icseSubjects || ['English', 'Maths', 'Physics', 'Chemistry', 'Biology', 'Science'];
     else if (board?.includes('state') || board?.includes('board')) subjects = master.stateBoardSubjects || ['Tamil', 'English', 'Maths', 'Physics', 'Chemistry', 'Biology'];
     else if (board?.includes('iti')) subjects = master.itiSubjects || ['Trade Practical', 'Trade Theory', 'Work Shop', 'Drawing', 'Social'];
-    else if (board?.includes('vocational')) subjects = master.vocationalSubjects || ['Language', 'English', 'Maths', 'Theory', 'Practical-I', 'Practical-II'];
     else subjects = master.otherSubjects || ['Subject 1', 'Subject 2', 'Subject 3', 'Subject 4', 'Subject 5', 'Subject 6'];
 
     // Update all 6 subject names with board subjects
@@ -375,25 +402,33 @@ const ApplicationForm = () => {
       const typeData = marksData[typeKey] || { subjects: [] };
       const config = SUBJECT_CONFIG[typeKey] || { subjects: [] };
 
-      const totalObt = config.subjects.reduce((sum, _, idx) => {
-        return sum + (Number(typeData.subjects[idx]?.obtained) || 0);
-      }, 0);
+      let totalObt = 0;
+      let totalMax = 0;
+      config.subjects.forEach((_, idx) => {
+        const s = typeData.subjects[idx];
+        const obtained = s?.obtained;
+        const max = Number(s?.max) || config.maxPerSubject || 100;
+        if (obtained === undefined || obtained === '') return;
+        totalObt += Number(obtained) || 0;
+        totalMax += max;
+      });
 
-      const totalMax = config.subjects.length * 100;
       const percentage = totalMax > 0 ? ((totalObt / totalMax) * 100).toFixed(2) : '0.00';
 
       payload[`${type}_total_obtained_mark`] = totalObt.toString();
       payload[`${type}_total_mark`] = totalMax.toString();
       payload[`${type}_percentage`] = percentage;
       if (type === 'hsc') {
-        payload[`${type}_cutoff`] = ((totalObt / totalMax) * 200).toFixed(2);
+        payload[`${type}_cutoff`] = totalMax > 0 ? ((totalObt / totalMax) * 200).toFixed(2) : '0.00';
       }
 
-      typeData.subjects.forEach((sub, i) => {
+      // Write all subjects in config (empty strings for unfilled optional ones clears DB on update)
+      config.subjects.forEach((defaultName, i) => {
         const sIdx = i + 1;
-        payload[`${type}_subject${sIdx}`] = sub.name;
-        payload[`${type}_subject${sIdx}_obtained_mark`] = sub.obtained;
-        payload[`${type}_subject${sIdx}_max_mark`] = sub.max;
+        const sub = typeData.subjects[i];
+        payload[`${type}_subject${sIdx}`] = sub?.name || defaultName;
+        payload[`${type}_subject${sIdx}_obtained_mark`] = sub?.obtained ?? '';
+        payload[`${type}_subject${sIdx}_max_mark`] = sub?.max ?? String(config.maxPerSubject || 100);
       });
 
       const selectedIds = selectedAttempts[typeKey] || [1];
@@ -436,10 +471,8 @@ const ApplicationForm = () => {
     const fromMarks = allTypes.find(t => m && m[`${t.toLowerCase()}_subject1`]);
     const fromFlags = allTypes.find(t => s[t.toLowerCase()] === 'yes' || s[t.toLowerCase()] === 'Yes');
     const candidate = (fromMarks && allowedTabs.includes(fromMarks) ? fromMarks : null)
-      || (fromFlags && allowedTabs.includes(fromFlags) ? fromFlags : null)
-      || allowedTabs[0]
-      || 'SSLC';
-    const activePrefix = candidate.toLowerCase();
+      || (fromFlags && allowedTabs.includes(fromFlags) ? fromFlags : null);
+    const activePrefix = candidate ? candidate.toLowerCase() : '';
 
     const newMarksData = { ...marksData };
     const newAttempts = { ...attempts };
@@ -450,13 +483,15 @@ const ApplicationForm = () => {
 
       // Un-flatten main subject marks for this type
       if (m[`${prefix}_subject1`]) {
+        const typeConfig = SUBJECT_CONFIG[t] || {};
+        const maxSubjects = typeConfig.count || 6;
         const subjects = [];
-        for (let i = 1; i <= 6; i++) {
+        for (let i = 1; i <= maxSubjects; i++) {
           if (m[`${prefix}_subject${i}`]) {
             subjects.push({
               name: m[`${prefix}_subject${i}`],
               obtained: m[`${prefix}_subject${i}_obtained_mark`] || '',
-              max: m[`${prefix}_subject${i}_max_mark`] || '100'
+              max: m[`${prefix}_subject${i}_max_mark`] || String(typeConfig.maxPerSubject || 100)
             });
           }
         }
@@ -501,15 +536,31 @@ const ApplicationForm = () => {
 
   const loadSavedData = async () => {
     try {
-      const res = await axios.get('/api/student/me', { withCredentials: true });
+      if (!localStorage.getItem('user')) return;
+      const res = await axios.get('/api/student/me', {
+        withCredentials: true,
+        validateStatus: (status) => status === 200 || status === 404,
+      });
+      if (res.status === 404) return;
       if (!res.data.success) return;
       const s = res.data.student;
       const m = res.data.marks;
+      const hasApplicationData = [
+        s.dob,
+        s.gender,
+        s.aadhar,
+        s.religion,
+        s.community,
+        s.caste,
+        s.communication_address,
+        s.father_name,
+        s.last_institution_name,
+      ].some(Boolean);
       setIsSubmitted(res.data.isSubmitted);
       setApplicationNo(res.data.applicationNo || '');
       setFormData(prev => ({
         ...prev,
-        fullName: s.student_name || '',
+        fullName: hasApplicationData ? (s.student_name || '') : '',
         dob: s.dob ? s.dob.split('T')[0] : '',
         gender: s.gender || '',
         aadhaar: s.aadhar || '',
@@ -546,9 +597,10 @@ const ApplicationForm = () => {
         preferences: s.college_choices ? (() => { try { return JSON.parse(s.college_choices); } catch { return []; } })() : [],
         photoPath: s.photo || '',
         tcPath: s.transfer_certificate || '',
-        marksheetPath: s.marksheet_certificate || '',
+        marksheetPath: s.marksheet_certificate || s.qualifying_marksheet_certificate || '',
         qualifyingMarksheetPath: s.qualifying_marksheet_certificate || '',
         communityPath: s.community_certificate || '',
+        experiencePath: s.experience_certificate || s.experinece_certificate || '',
         ...(m ? {
           hscRegisterNo: m.hsc_register_no || '',
           hscExamType: m.hsc_exam_type || '',
@@ -620,6 +672,29 @@ const ApplicationForm = () => {
       setErrors(prev => ({ ...prev, community: null, caste: null }));
       return;
     }
+    if (name === 'admissionType') {
+      setFormData(prev => ({
+        ...prev,
+        admissionType: value,
+        qualifyingType: '',
+        photoPath: '',
+        tcPath: '',
+        marksheetPath: '',
+        qualifyingMarksheetPath: '',
+        communityPath: '',
+        experiencePath: '',
+      }));
+      setErrors(prev => ({
+        ...prev,
+        photoPath: null,
+        tcPath: null,
+        marksheetPath: null,
+        qualifyingMarksheetPath: null,
+        communityPath: null,
+        experiencePath: null,
+      }));
+      return;
+    }
 
     // Numeric-only enforcement for specific fields
     const numericFields = ['aadhaar', 'mobile', 'alternateMobile', 'annualIncome', 'registerNumber', 'hscRegisterNo', 'sslcRegisterNo'];
@@ -683,7 +758,8 @@ const ApplicationForm = () => {
           tc: 'tcPath',
           marksheet: 'marksheetPath',
           marksheetQualifying: 'qualifyingMarksheetPath',
-          community: 'communityPath'
+          community: 'communityPath',
+          experience: 'experiencePath'
         }[docType];
         if (!pathKey) {
           toast.error('Unknown document type');
@@ -735,18 +811,16 @@ const ApplicationForm = () => {
       const tabs = getAdmissionAllowedMarkTabs(formData.admissionType);
       const q = (formData.qualifyingType || '').toUpperCase();
       if (!tabs.length || !tabs.includes(q)) return false;
-      const allMarksOk = tabs.every((tab) => {
-        const typeData = marksData[tab];
-        return typeData?.subjects?.some(s => s?.obtained !== undefined && s?.obtained !== '' && Number(s.obtained) >= 0);
-      });
-      if (!allMarksOk) return false;
+      const activeTabData = marksData[q];
+      const hasMarks = activeTabData?.subjects?.some(s => s?.obtained !== undefined && s?.obtained !== '' && Number(s.obtained) >= 0);
+      if (!hasMarks) return false;
     }
     if (id === 7) {
       if (!formData.preferences || formData.preferences.filter(Boolean).length === 0) return false;
     }
     if (id === 8) {
-      if (!formData.photoPath || !formData.marksheetPath) return false;
-      if (admissionRequiresSecondMarksheetUpload(formData.admissionType) && !formData.qualifyingMarksheetPath) return false;
+      if (!formData.photoPath || !formData.marksheetPath || !formData.communityPath || !formData.tcPath) return false;
+      if (getDocumentProfile(formData) === 'ITI' && !formData.experiencePath) return false;
     }
 
     return true;
@@ -795,6 +869,29 @@ const ApplicationForm = () => {
       }
     }
 
+    if (id === 8) {
+      if (!formData.photoPath) {
+        stepErrors.photoPath = 'Upload required document';
+        isValid = false;
+      }
+      if (!formData.marksheetPath) {
+        stepErrors.marksheetPath = 'Upload required document';
+        isValid = false;
+      }
+      if (!formData.communityPath) {
+        stepErrors.communityPath = 'Upload required document';
+        isValid = false;
+      }
+      if (!formData.tcPath) {
+        stepErrors.tcPath = 'Upload required document';
+        isValid = false;
+      }
+      if (getDocumentProfile(formData) === 'ITI' && !formData.experiencePath) {
+        stepErrors.experiencePath = 'Upload required document';
+        isValid = false;
+      }
+    }
+
     if (id === 5) {
       const tabs = getAdmissionAllowedMarkTabs(formData.admissionType);
       const q = (formData.qualifyingType || '').toUpperCase();
@@ -802,19 +899,33 @@ const ApplicationForm = () => {
         stepErrors.qualifyingType = 'Select a valid qualifying examination for your admission category';
         isValid = false;
       }
-      const missingMarksTab = tabs.find((tab) => {
-        const typeData = marksData[tab];
-        return !typeData?.subjects?.some(s => s?.obtained !== undefined && s?.obtained !== '' && Number(s.obtained) >= 0);
-      });
-      if (missingMarksTab) {
-        stepErrors.marks = `Enter marks for every subject tab required for your course (${tabs.join(', ')}).`;
+      const activeTabData = marksData[q];
+      const hasMarks = activeTabData?.subjects?.some(s => s?.obtained !== undefined && s?.obtained !== '' && Number(s.obtained) >= 0);
+      if (!hasMarks) {
+        stepErrors.marks = `Enter marks for the selected qualifying examination (${q}).`;
         isValid = false;
       }
     }
 
     if (id === 8) {
-      if (admissionRequiresSecondMarksheetUpload(formData.admissionType) && !formData.qualifyingMarksheetPath) {
-        stepErrors.qualifyingMarksheetPath = `${fieldLabels.qualifyingMarksheetPath} is required`;
+      if (!formData.photoPath) {
+        stepErrors.photoPath = 'Upload required document';
+        isValid = false;
+      }
+      if (!formData.marksheetPath) {
+        stepErrors.marksheetPath = 'Upload required document';
+        isValid = false;
+      }
+      if (!formData.communityPath) {
+        stepErrors.communityPath = 'Upload required document';
+        isValid = false;
+      }
+      if (!formData.tcPath) {
+        stepErrors.tcPath = 'Upload required document';
+        isValid = false;
+      }
+      if (getDocumentProfile(formData) === 'ITI' && !formData.experiencePath) {
+        stepErrors.experiencePath = 'Upload required document';
         isValid = false;
       }
     }
@@ -1113,7 +1224,35 @@ const ApplicationForm = () => {
                 )}
                 <EducationSelector
                   selectedType={formData.qualifyingType}
-                  setQualifyingType={(t) => setFormData({ ...formData, qualifyingType: t.toLowerCase() })}
+                  setQualifyingType={(t) => setFormData(prev => ({
+                    ...prev,
+                    qualifyingType: t.toLowerCase(),
+                    photoPath: '',
+                    tcPath: '',
+                    marksheetPath: '',
+                    qualifyingMarksheetPath: '',
+                    communityPath: '',
+                    experiencePath: '',
+                  }))}
+                  lockedType={lockedQualifyingType}
+                  onClearSelection={() => {
+                    const locked = getLockedQualifyingType(formData.admissionType, marksData);
+                    if (locked) {
+                      setMarksData(prev => ({ ...prev, [locked]: { subjects: [] } }));
+                      setAttempts(prev => ({ ...prev, [locked]: {} }));
+                      setSelectedAttempts(prev => ({ ...prev, [locked]: [] }));
+                    }
+                    setFormData(prev => ({
+                      ...prev,
+                      qualifyingType: '',
+                      photoPath: '',
+                      tcPath: '',
+                      marksheetPath: '',
+                      qualifyingMarksheetPath: '',
+                      communityPath: '',
+                      experiencePath: '',
+                    }));
+                  }}
                   tabConfig={getAdmissionMarkTabConfig(formData.admissionType)}
                   disabled={isSubmitted}
                 />
@@ -1388,22 +1527,12 @@ const FormSummary = ({ data, onGoToStep, isSubmitted, applicationNo, eduHistory,
       <SummarySection title="8. Uploaded Documents" stepId={8}>
         <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
           <SummaryDocPreview label="Passport Photo" path={data.photoPath} onPreview={onPreview} />
-          <SummaryDocPreview label="Transfer Cert." path={data.tcPath} onPreview={onPreview} />
-          <SummaryDocPreview label="SSLC marksheet" path={data.marksheetPath} onPreview={onPreview} />
-          {(data.qualifyingMarksheetPath || admissionRequiresSecondMarksheetUpload(data.admissionType)) && (
-            <SummaryDocPreview
-              label={
-                getAdmissionAllowedMarkTabs(data.admissionType).includes('HSC')
-                  ? 'HSC marksheet'
-                  : getAdmissionAllowedMarkTabs(data.admissionType).includes('ITI')
-                    ? 'ITI marksheet'
-                    : 'Additional marksheet'
-              }
-              path={data.qualifyingMarksheetPath}
-              onPreview={onPreview}
-            />
-          )}
+          <SummaryDocPreview label="Marksheet" path={data.marksheetPath} onPreview={onPreview} />
           <SummaryDocPreview label="Community Cert." path={data.communityPath} onPreview={onPreview} />
+          <SummaryDocPreview label="Transfer Cert." path={data.tcPath} onPreview={onPreview} />
+          {getDocumentProfile(data) === 'ITI' && (
+            <SummaryDocPreview label="Experience Cert." path={data.experiencePath} onPreview={onPreview} />
+          )}
         </div>
       </SummarySection>
 
@@ -1508,21 +1637,23 @@ const PersonalDetails = ({ data, errors, onChange, master, disabled, application
       <input type="date" name="dob" value={data.dob} onChange={onChange} disabled={disabled} />
     </FormField>
 
-    <FormField label="Gender" required error={errors.gender} disabled={disabled} layout="horizontal">
+      <FormField label="Gender" required error={errors.gender} disabled={disabled} layout="horizontal">
       <select name="gender" value={data.gender} onChange={onChange} disabled={disabled}>
         <option value="">Select Gender</option>
         {(master?.gender || ['Male', 'Female', 'Transgender']).map(opt => <option key={opt} value={opt}>{opt}</option>)}
       </select>
     </FormField>
 
-    <FormField label="Aadhaar Number (12-Digit)" required error={errors.aadhaar} disabled={disabled} layout="horizontal">
-      <input type="text" name="aadhaar" value={data.aadhaar} onChange={onChange} maxLength={12} placeholder="XXXX XXXX XXXX" disabled={disabled} />
+<FormField label="Age" disabled={true} layout="horizontal">
+      <input type="number" name="age" value={data.age} readOnly disabled
+        className="bg-slate-100 text-slate-600 font-bold cursor-not-allowed"
+        placeholder="Auto-filled from Date of Birth" />
     </FormField>
 
     <FormField label="Religion" required error={errors.religion} disabled={disabled} layout="horizontal">
       <select name="religion" value={data.religion} onChange={onChange} disabled={disabled}>
         <option value="">Select Religion</option>
-        {(master?.religion || ['Hindu', 'Christian', 'Muslim', 'Sikh', 'Others']).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        {(master?.religion || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
       </select>
     </FormField>
 
@@ -1601,10 +1732,8 @@ const PersonalDetails = ({ data, errors, onChange, master, disabled, application
       </select>
     </FormField>
 
-    <FormField label="Age" disabled={true} layout="horizontal">
-      <input type="number" name="age" value={data.age} readOnly disabled
-        className="bg-slate-100 text-slate-600 font-bold cursor-not-allowed"
-        placeholder="Auto-filled from Date of Birth" />
+    <FormField label="Aadhaar Number (12-Digit)" required error={errors.aadhaar} disabled={disabled} layout="horizontal">
+      <input type="text" name="aadhaar" value={data.aadhaar} onChange={onChange} maxLength={12} placeholder="XXXX XXXX XXXX" disabled={disabled} />
     </FormField>
 
     <FormField label="Citizenship" error={errors.citizenship} disabled={disabled} layout="horizontal">
@@ -1720,18 +1849,18 @@ const ParentDetails = ({ data, errors, onChange, disabled }) => (
     </div>
 
     <FormField label="Father's Full Name" required error={errors.fatherName} disabled={disabled} layout="horizontal">
-      <input type="text" name="fatherName" value={data.fatherName} onChange={onChange} placeholder="Full Name" disabled={disabled} />
+      <input type="text" name="fatherName" value={data.fatherName || ''} onChange={onChange} placeholder="Full Name" disabled={disabled} />
     </FormField>
 
     <FormField label="Mother's Full Name" required error={errors.motherName} disabled={disabled} layout="horizontal">
-      <input type="text" name="motherName" value={data.motherName} onChange={onChange} placeholder="Full Name" disabled={disabled} />
+      <input type="text" name="motherName" value={data.motherName || ''} onChange={onChange} placeholder="Full Name" disabled={disabled} />
     </FormField>
 
     <FormField label="Parent Occupation" required error={errors.parentOccupation} disabled={disabled} layout="horizontal">
       <input
         type="text"
         name="parentOccupation"
-        value={data.parentOccupation}
+        value={data.parentOccupation || ''}
         onChange={onChange}
         placeholder="Type occupation"
         required
@@ -1740,12 +1869,15 @@ const ParentDetails = ({ data, errors, onChange, disabled }) => (
     </FormField>
 
     <FormField label="Family Annual Income (₹)" required error={errors.annualIncome} tooltip="Total yearly household income" disabled={disabled} layout="horizontal">
-      <input type="number" name="annualIncome" value={data.annualIncome} onChange={onChange} placeholder="Amount in Rupees" required disabled={disabled} />
+      <input type="number" name="annualIncome" value={data.annualIncome || ''} onChange={onChange} placeholder="Amount in Rupees" required disabled={disabled} />
     </FormField>
   </div>
 );
 
-const AcademicDetails = ({ data, errors, onChange, onDistrictChange, onEduHistDistrictChange, master, eduHistory, setEduHistory, disabled }) => (
+const AcademicDetails = ({ data, errors, onChange, onDistrictChange, onEduHistDistrictChange, master, eduHistory, setEduHistory, disabled }) => {
+  const isFirstYearAdmission = normalizeAdmissionType(data.admissionType) === 'First Year';
+
+  return (
   <div className="space-y-12">
     <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
       <div className="md:col-span-2">
@@ -1799,11 +1931,24 @@ const AcademicDetails = ({ data, errors, onChange, onDistrictChange, onEduHistDi
     </div>
 
     <div className="pt-8 border-t border-slate-200">
-      <SectionTitle title="Educational History" subtitle="Add your schooling progression from 6th standard onwards." />
-      <EducationHistory eduHistory={eduHistory} setEduHistory={setEduHistory} onDistrictChange={onEduHistDistrictChange} master={master} disabled={disabled} />
+      <SectionTitle
+        title="Educational History"
+        subtitle={isFirstYearAdmission
+          ? 'Add your schooling progression from 6th to 10th standard only.'
+          : 'Add your schooling progression from 6th standard onwards.'}
+      />
+      <EducationHistory
+        eduHistory={eduHistory}
+        setEduHistory={setEduHistory}
+        onDistrictChange={onEduHistDistrictChange}
+        master={master}
+        disabled={disabled}
+        admissionType={data.admissionType}
+      />
     </div>
   </div>
-);
+  );
+};
 
 const MarksEntry = ({ data, errors, onChange, master, disabled }) => {
   const getSubjectsForBoard = () => {
@@ -2216,9 +2361,7 @@ const CollegeChoice = ({ data, onChange, onPrefChange, colleges, master, disable
 };
 
 const DocumentUploads = ({ data, onUpload, onPreview, disabled }) => {
-  const markTabs = getAdmissionAllowedMarkTabs(data.admissionType);
-  const needSecondMs = admissionRequiresSecondMarksheetUpload(data.admissionType);
-  const secondLabel = markTabs.includes('HSC') ? 'HSC marksheet' : markTabs.includes('ITI') ? 'ITI marksheet' : 'Qualifying marksheet';
+  const { profile, docs } = getDocumentRequirements(data);
 
   return (
   <div className="space-y-8">
@@ -2231,14 +2374,23 @@ const DocumentUploads = ({ data, onUpload, onPreview, disabled }) => {
         Files outside this size range will not be uploaded. Supported formats: {COMMON_UPLOAD_LABEL}.
       </p>
     </div>
-    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <UploadBox label="Passport Photo" subLabel={`Mandatory • ${COMMON_UPLOAD_LABEL}`} docType="photo" currentPath={data.photoPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
-      <UploadBox label="SSLC marksheet" subLabel={`10th / SSLC scan • ${COMMON_UPLOAD_LABEL}`} docType="marksheet" currentPath={data.marksheetPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
-      {needSecondMs && (
-        <UploadBox label={secondLabel} subLabel={`Mandatory • ${COMMON_UPLOAD_LABEL}`} docType="marksheetQualifying" currentPath={data.qualifyingMarksheetPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
-      )}
-      <UploadBox label="Transfer Certificate" subLabel={`PDF / Image / Document • ${COMMON_UPLOAD_LABEL}`} docType="tc" currentPath={data.tcPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
-      <UploadBox label="Community Cert." subLabel={`Optional for OC • ${COMMON_UPLOAD_LABEL}`} docType="community" currentPath={data.communityPath} onUpload={onUpload} onPreview={onPreview} accept={COMMON_UPLOAD_ACCEPT} disabled={disabled} />
+    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">
+      Document profile: {profile}
+    </div>
+    <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+      {docs.map((doc) => (
+        <UploadBox
+          key={doc.key}
+          label={doc.label}
+          subLabel={doc.subLabel}
+          docType={doc.docType}
+          currentPath={data[doc.key]}
+          onUpload={onUpload}
+          onPreview={onPreview}
+          accept={COMMON_UPLOAD_ACCEPT}
+          disabled={disabled}
+        />
+      ))}
     </div>
     <div className="p-6 bg-slate-50 border border-slate-200 rounded">
       <div className="flex gap-4">
@@ -2265,8 +2417,12 @@ const UploadBox = ({ label, subLabel, docType, currentPath, onUpload, onPreview,
     if (disabled) return;
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size < MIN_FILE_SIZE) { toast.error('File size should be at least 150KB'); return; }
-    if (file.size > MAX_FILE_SIZE) { toast.error('File size exceeds 5MB'); return; }
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const allowedExts = ['pdf', 'jpg', 'jpeg'];
+    if (file.size < MIN_FILE_SIZE || file.size > MAX_FILE_SIZE || !allowedExts.includes(ext)) {
+      toast.error('Invalid file size/type');
+      return;
+    }
     setUploading(true);
     await onUpload(file, docType);
     setUploading(false);
@@ -2393,7 +2549,10 @@ const PreviewModal = ({ url, onClose }) => {
 // NEW DYNAMIC COMPONENTS
 // ─────────────────────────────────────────────────────────
 
-const EducationHistory = ({ eduHistory, setEduHistory, onDistrictChange, master, disabled }) => {
+const EducationHistory = ({ eduHistory, setEduHistory, onDistrictChange, master, disabled, admissionType }) => {
+  const isFirstYearAdmission = normalizeAdmissionType(admissionType) === 'First Year';
+  const allowedStandards = isFirstYearAdmission ? ['6', '7', '8', '9', '10'] : ['6', '7', '8', '9', '10', '11', '12'];
+
   const addRow = () => {
     if (disabled) return;
     setEduHistory([...eduHistory, { standard: "", school: "", year: "", state: "Tamil Nadu", district: "" }]);
@@ -2414,7 +2573,9 @@ const EducationHistory = ({ eduHistory, setEduHistory, onDistrictChange, master,
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Academic Progression (6th - 12th)</h4>
+        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Academic Progression ({isFirstYearAdmission ? '6th - 10th' : '6th - 12th'})
+        </h4>
         {!disabled && (
           <button type="button" onClick={addRow} className="text-[9px] font-bold bg-blue-600 text-white px-3 py-1 rounded uppercase tracking-wider hover:bg-blue-700 transition-colors">
             + Add Row
@@ -2439,7 +2600,8 @@ const EducationHistory = ({ eduHistory, setEduHistory, onDistrictChange, master,
               <tr key={idx} className="bg-white hover:bg-slate-50 transition-colors">
                 <td className="px-4 py-2 border-r border-slate-200">
                   <select value={row.standard} onChange={(e) => updateRow(idx, 'standard', e.target.value)} disabled={disabled} className="w-full text-xs font-bold border-none bg-transparent focus:ring-0">
-                    {['6', '7', '8', '9', '10', '11', '12'].map(s => <option key={s} value={s}>{s}th</option>)}
+                    <option value="">Select Standard</option>
+                    {allowedStandards.map(s => <option key={s} value={s}>{s}th</option>)}
                   </select>
                 </td>
                 <td className="px-4 py-2 border-r border-slate-200">
@@ -2476,27 +2638,48 @@ const EducationHistory = ({ eduHistory, setEduHistory, onDistrictChange, master,
   );
 };
 
-const EducationSelector = ({ selectedType, setQualifyingType, tabConfig, disabled }) => {
+const EducationSelector = ({ selectedType, setQualifyingType, lockedType, onClearSelection, tabConfig, disabled }) => {
   const tabs = (tabConfig && tabConfig.length ? tabConfig : MARK_TAB_ORDER.map(type => ({ type, enabled: true })));
   const gridClass = 'grid-cols-2 md:grid-cols-4';
+  const selected = (selectedType || '').toLowerCase();
+  const locked = (lockedType || '').toLowerCase();
   return (
-    <div className={`grid gap-3 mb-8 ${gridClass}`}>
-      {tabs.map(({ type, enabled }) => (
-        <button
-          key={type}
-          type="button"
-          disabled={disabled || !enabled}
-          onClick={() => enabled && setQualifyingType(type.toLowerCase())}
-          className={`px-4 py-3 rounded border font-bold text-xs uppercase tracking-widest transition-all
-            ${!enabled
-              ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
-              : selectedType === type.toLowerCase()
-              ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-100'
-              : 'bg-slate-50 text-slate-500 border-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600'}`}
-        >
-          {type}
-        </button>
-      ))}
+    <div className="space-y-3 mb-8">
+      <div className={`grid gap-3 ${gridClass}`}>
+        {tabs.map(({ type, enabled }) => {
+          const typeKey = type.toLowerCase();
+          const isSelected = selected === typeKey;
+          const isLockedOut = !!locked && locked !== typeKey;
+          return (
+            <button
+              key={type}
+              type="button"
+              disabled={disabled || !enabled || isLockedOut}
+              onClick={() => enabled && setQualifyingType(type.toLowerCase())}
+              className={`px-4 py-3 rounded border font-bold text-xs uppercase tracking-widest transition-all
+                ${!enabled || isLockedOut
+                  ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
+                  : isSelected
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-100'
+                  : 'bg-slate-50 text-slate-500 border-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600'}`}
+            >
+              {type}
+            </button>
+          );
+        })}
+      </div>
+
+      {!!locked && !disabled && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onClearSelection}
+            className="px-4 py-2 rounded border border-slate-200 bg-white text-slate-600 text-[10px] font-black uppercase tracking-widest hover:border-blue-300 hover:text-blue-700 transition-all"
+          >
+            Change Qualifying Exam
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -2589,101 +2772,140 @@ const AttemptManager = ({ type, attempts, setAttempts, selectedAttempts, setSele
 };
 
 const MarksTable = ({ type, data, setData, disabled }) => {
-  const config = SUBJECT_CONFIG[type?.toUpperCase()] || { count: 0, subjects: [] };
+  const typeKey = type?.toUpperCase();
+  const config = SUBJECT_CONFIG[typeKey] || { count: 0, subjects: [], maxPerSubject: 100 };
+  const typeMarks = data[typeKey] || { subjects: [] };
 
-  const updateMark = (idx, field, value) => {
+  const updateMark = (idx, field, rawValue) => {
     if (disabled) return;
-    const typeKey = type?.toUpperCase();
-    const typeMarks = data[typeKey] || { subjects: [] };
     const newSubjects = [...typeMarks.subjects];
 
-    // Ensure all previous subjects are filled with defaults if they don't exist
     for (let i = 0; i <= idx; i++) {
       if (!newSubjects[i]) {
         newSubjects[i] = {
           name: config.subjects[i] || `Subject ${i + 1}`,
           obtained: '',
-          max: '100'
+          max: String(config.maxPerSubject || 100)
         };
       }
     }
 
     if (field === 'obtained') {
-      // Allow only digits
-      const cleanValue = value.replace(/\D/g, '');
-      const maxLimit = Number(newSubjects[idx].max) || 100;
-
-      // Cap at max mark
-      if (Number(cleanValue) > maxLimit) {
-        newSubjects[idx].obtained = '';
-      } else {
-        newSubjects[idx].obtained = cleanValue;
-      }
+      const cleanValue = rawValue.replace(/\D/g, '');
+      const maxLimit = Number(newSubjects[idx].max) || config.maxPerSubject || 100;
+      newSubjects[idx].obtained = Number(cleanValue) > maxLimit ? '' : cleanValue;
+    } else if (field === 'max') {
+      const cleanValue = rawValue.replace(/\D/g, '');
+      newSubjects[idx].max = cleanValue;
+      // Re-validate obtained if max decreased
+      const obt = Number(newSubjects[idx].obtained);
+      const newMax = Number(cleanValue);
+      if (newMax > 0 && obt > newMax) newSubjects[idx].obtained = '';
     } else {
-      newSubjects[idx][field] = value;
+      newSubjects[idx][field] = rawValue;
     }
 
     setData({ ...data, [typeKey]: { ...typeMarks, subjects: newSubjects } });
   };
 
-  // Robust Calculation: sum up all possible subjects from config
-  const typeKey = type?.toUpperCase();
-  const typeMarks = data[typeKey] || { subjects: [] };
-
-  const totalObt = config.subjects.reduce((sum, _, idx) => {
+  // Calculate totals from actual student-entered data
+  let totalObt = 0;
+  let totalMax = 0;
+  config.subjects.forEach((_, idx) => {
     const s = typeMarks.subjects[idx];
-    return sum + (Number(s?.obtained) || 0);
-  }, 0);
-
-  const totalMax = config.subjects.length * 100;
+    const obtained = s?.obtained;
+    const max = Number(s?.max) || config.maxPerSubject || 100;
+    if (obtained === undefined || obtained === '') return;
+    totalObt += Number(obtained) || 0;
+    totalMax += max;
+  });
   const percentage = totalMax > 0 ? ((totalObt / totalMax) * 100).toFixed(2) : '0.00';
+  const cutoff = typeKey === 'HSC' && totalMax > 0 ? ((totalObt / totalMax) * 200).toFixed(2) : null;
 
   return (
     <div className="space-y-6">
-      <div className="overflow-x-auto border border-slate-300 rounded-lg">
+      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-semibold">
+        Enter subject names, marks obtained, and max marks for each subject. The optional 7th ITI subject can be left blank if not applicable.
+      </div><div className="overflow-x-auto border border-slate-300 rounded-lg">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-300">
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest border-r border-slate-300">#</th>
               <th className="px-6 py-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest border-r border-slate-300">Subject</th>
               <th className="px-6 py-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest text-center border-r border-slate-300">Marks Obtained</th>
               <th className="px-6 py-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest text-center">Max Marks</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300">
-            {config.subjects.map((name, idx) => (
-              <tr key={idx} className="hover:bg-slate-50/50">
-                <td className="px-6 py-4 text-xs font-bold text-slate-700 border-r border-slate-300">{name}</td>
-                <td className="px-6 py-4 text-center border-r border-slate-300">
-                  <input type="number"
-                    value={typeMarks.subjects[idx]?.obtained || ''}
-                    onChange={e => updateMark(idx, 'obtained', e.target.value)}
-                    disabled={disabled}
-                    className="w-24 mx-auto block text-center font-bold text-blue-600 bg-white border border-slate-300 rounded py-2 px-1 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm outline-none shadow-sm" placeholder="0" />
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <div className="w-20 mx-auto bg-slate-50 border border-slate-200 rounded py-1.5 px-2 text-sm font-black text-slate-400 select-none">
-                    100
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {config.subjects.map((name, idx) => {
+              const isOptional = config.optionalFrom !== undefined && idx >= config.optionalFrom;
+              const subjectData = typeMarks.subjects[idx];
+              return (
+                <tr key={idx} className={`hover:bg-slate-50/50 ${isOptional ? 'bg-amber-50/40' : ''}`}>
+                  <td className="px-4 py-4 text-xs font-black text-slate-400 border-r border-slate-300 text-center">{idx + 1}</td>
+                  <td className="px-6 py-4 border-r border-slate-300">
+                    <input
+                      type="text"
+                      value={subjectData?.name ?? name}
+                      onChange={e => updateMark(idx, 'name', e.target.value)}
+                      disabled={disabled}
+                      className="w-full min-w-0 text-xs font-bold text-slate-700 bg-transparent border border-transparent rounded px-1 py-1 focus:bg-white focus:border-slate-300 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
+                      placeholder={`Subject ${idx + 1}`}
+                    />
+                    {isOptional && (
+                      <span className="ml-2 text-[9px] font-black text-amber-600 uppercase tracking-wide bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">Optional</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center border-r border-slate-300">
+                    <input
+                      type="number"
+                      value={subjectData?.obtained ?? ''}
+                      onChange={e => updateMark(idx, 'obtained', e.target.value)}
+                      disabled={disabled}
+                      className="w-24 mx-auto block text-center font-bold text-blue-600 bg-white border border-slate-300 rounded py-2 px-1 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm outline-none shadow-sm"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <input
+                      type="number"
+                      value={subjectData?.max ?? String(config.maxPerSubject || 100)}
+                      onChange={e => updateMark(idx, 'max', e.target.value)}
+                      disabled={disabled}
+                      className="w-20 mx-auto block text-center font-bold text-slate-600 bg-white border border-slate-300 rounded py-2 px-1 focus:ring-2 focus:ring-slate-400/20 focus:border-slate-500 transition-all text-sm outline-none shadow-sm"
+                      placeholder="100"
+                      min="1"
+                    />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className={`grid gap-4 ${cutoff ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
         <div className="p-6 border border-slate-200 rounded-lg bg-slate-50 flex justify-between items-center">
           <div>
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Total Calculated</p>
+            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Total Marks</p>
             <p className="text-2xl font-black text-slate-800 tracking-tight">{totalObt} <span className="text-xs font-bold text-slate-400">/ {totalMax}</span></p>
           </div>
         </div>
         <div className="p-6 border-2 border-blue-600 rounded-lg bg-blue-50 flex justify-between items-center">
           <div>
-            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Percentage Aggregate</p>
+            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Percentage</p>
             <p className="text-2xl font-black text-blue-800 tracking-tight">{percentage} %</p>
           </div>
         </div>
+        {cutoff && (
+          <div className="p-6 border-2 border-emerald-600 rounded-lg bg-emerald-50 flex justify-between items-center">
+            <div>
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">HSC Cutoff Mark</p>
+              <p className="text-2xl font-black text-emerald-800 tracking-tight">{cutoff}</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

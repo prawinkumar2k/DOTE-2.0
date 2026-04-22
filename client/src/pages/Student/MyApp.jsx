@@ -13,8 +13,11 @@ const MyApp = () => {
   useEffect(() => {
     setLoading(true);
     // Fetch user data
-    axios.get('/api/student/me', { withCredentials: true })
-      .then(res => { if (res.data.success) setData(res.data); })
+    axios.get('/api/student/me', {
+      withCredentials: true,
+      validateStatus: (status) => status === 200 || status === 404,
+    })
+      .then(res => { if (res.status === 200 && res.data.success) setData(res.data); })
       .catch(() => {})
       .finally(() => {
          // Also fetch colleges
@@ -192,6 +195,7 @@ const MyApp = () => {
                 <DocStatus label="Transfer Cert" path={s.transfer_certificate} />
                 <DocStatus label="Marksheet" path={s.marksheet_certificate} />
                 <DocStatus label="Community Cert" path={s.community_certificate} />
+                <DocStatus label="Experience Cert" path={s.experience_certificate || s.experinece_certificate} />
               </div>
             </Section>
           </div>

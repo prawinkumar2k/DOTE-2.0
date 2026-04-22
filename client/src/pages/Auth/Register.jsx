@@ -170,7 +170,7 @@ const Register = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wide px-1">Full Name</label>
-              <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Enter full name" className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-4 pr-4 text-sm font-medium outline-none focus:border-blue-300 transition-all" />
+              <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Enter full name" autoComplete="name" className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-4 pr-4 text-sm font-medium outline-none focus:border-blue-300 transition-all" />
             </div>
 
             <div className="space-y-1.5">
@@ -206,11 +206,11 @@ const Register = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide px-1">Password</label>
-                <input type="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-4 pr-4 text-sm font-medium outline-none focus:border-blue-300 transition-all" />
+                <input type="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="••••••••" autoComplete="new-password" className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-4 pr-4 text-sm font-medium outline-none focus:border-blue-300 transition-all" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide px-1">Confirm</label>
-                <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-4 pr-4 text-sm font-medium outline-none focus:border-blue-300 transition-all" />
+                <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} placeholder="••••••••" autoComplete="new-password" className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-4 pr-4 text-sm font-medium outline-none focus:border-blue-300 transition-all" />
               </div>
             </div>
 

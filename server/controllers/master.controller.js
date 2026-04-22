@@ -9,10 +9,7 @@ const getMasterData = async (req, res) => {
       religions = await Master.getAllReligions();
     } catch (err) {
       console.warn('[getMasterData] religion_master:', err.message);
-      const [rows] = await db.query(
-        'SELECT DISTINCT religion AS religion_name FROM student_master WHERE religion IS NOT NULL AND religion <> "" ORDER BY religion'
-      );
-      religions = rows.map((r, idx) => ({ id: idx + 1, religion_name: r.religion_name }));
+      religions = [];
     }
 
     const [communities, districts] = await Promise.all([
@@ -124,7 +121,6 @@ const getMasterData = async (req, res) => {
       icseSubjects:      ['English', 'Maths', 'Physics', 'Chemistry', 'Biology', 'Science'],
       stateBoardSubjects:['Tamil', 'English', 'Maths', 'Physics', 'Chemistry', 'Biology'],
       itiSubjects:       ['Trade Practical', 'Trade Theory', 'Work Shop', 'Drawing', 'Social'],
-      vocationalSubjects:['Language', 'English', 'Maths', 'Theory', 'Practical-I', 'Practical-II'],
       otherSubjects:     ['Subject 1', 'Subject 2', 'Subject 3', 'Subject 4', 'Subject 5', 'Subject 6'],
     });
   } catch (err) {

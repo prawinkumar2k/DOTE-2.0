@@ -105,6 +105,18 @@ const Student = {
     await db.query('UPDATE student_master SET community_certificate=? WHERE id=?', [path, id]);
   },
 
+  updateExperience: async (id, filePath) => {
+    try {
+      await db.query('UPDATE student_master SET experience_certificate=? WHERE id=?', [filePath, id]);
+    } catch (err) {
+      if (err.code === 'ER_BAD_FIELD_ERROR' || err.errno === 1054) {
+        await db.query('UPDATE student_master SET experinece_certificate=? WHERE id=?', [filePath, id]);
+      } else {
+        throw err;
+      }
+    }
+  },
+
   submit: async (id, paymentId = null) => {
     const appNo = `DOTE2026${Math.floor(1000 + Math.random() * 9000)}`;
     if (paymentId) {

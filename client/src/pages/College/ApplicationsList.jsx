@@ -207,6 +207,7 @@ const ApplicationsList = () => {
                         <DocumentLink path={app.raw?.transfer_certificate} label="TC" />
                         <DocumentLink path={app.raw?.marksheet_certificate} label="Marksheet" />
                         <DocumentLink path={app.raw?.community_certificate} label="Community" />
+                        <DocumentLink path={app.raw?.experience_certificate || app.raw?.experinece_certificate} label="Experience" />
                        
                       </div>
                     </td>

@@ -37,7 +37,6 @@ const ApplicationReport = ({ data, colleges = [], headerActions = null }) => {
     if (m?.hsc === 'Yes' || m?.hsc === 'yes') return 'hsc';
     if (m?.sslc === 'Yes' || m?.sslc === 'yes') return 'sslc';
     if (m?.iti === 'Yes' || m?.iti === 'yes') return 'iti';
-    if (m?.voc === 'Yes' || m?.voc === 'yes') return 'voc';
     return 'hsc'; // Default
   };
 

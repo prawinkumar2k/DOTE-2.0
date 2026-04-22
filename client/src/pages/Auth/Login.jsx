@@ -348,6 +348,7 @@ const Login = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="••••••••"
+                    autoComplete="current-password"
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-10 pr-4 text-sm font-medium text-gray-700 outline-none transition-all focus:bg-white focus:border-gray-400"
                   />
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">

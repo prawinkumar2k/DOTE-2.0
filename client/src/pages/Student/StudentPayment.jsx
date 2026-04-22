@@ -205,8 +205,16 @@ const StudentPayment = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await axios.get('/api/student/me', { withCredentials: true });
+        const res = await axios.get('/api/student/me', {
+          withCredentials: true,
+          validateStatus: (status) => status === 200 || status === 404,
+        });
         if (cancelled) return;
+        if (res.status === 404) {
+          toast.error('No student application found. Please log in again.');
+          navigate('/login', { replace: true });
+          return;
+        }
         if (res.data?.isSubmitted) {
           toast.info('Your application is already submitted.');
           navigate('/student/my-application', { replace: true });

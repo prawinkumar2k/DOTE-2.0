@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import MainLayout from '../../components/layout/MainLayout';
-import { Search, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '../../utils/dateUtils';
+import DataTable from '../../components/DataTable';
+import { getActionColumn, getDateColumn } from '../../utils/tableHelpers';
 
 const normalizeFileUrl = (filePath) => {
   if (!filePath) return '';
@@ -36,15 +38,12 @@ const DocumentLink = ({ path, label }) => {
 };
 
 const ApplicationsList = () => {
-  const [searchQuery, setSearchQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState('All');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const navigate = useNavigate();
-  const PAGE_SIZE = 20;
 
   useEffect(() => {
     const fetchApps = async () => {
@@ -52,15 +51,13 @@ const ApplicationsList = () => {
         const { data } = await axios.get('/api/college/applications', { withCredentials: true });
         if (data.success && data.applications) {
           const formattedApps = data.applications.map(app => ({
+            ...app,
             db_id: app.id,
             id: app.application_no || `APP-${app.id}`,
             name: app.student_name || 'Anonymous',
-            date: formatDate(app.created_at),
+            displayDate: formatDate(app.created_at),
             gender: app.gender || '—',
             community: app.community || '—',
-            email: app.email,
-            mobile: app.mobile,
-            raw: app
           }));
           setApps(formattedApps);
         }
@@ -73,22 +70,17 @@ const ApplicationsList = () => {
     fetchApps();
   }, []);
 
+  // External filters (Gender & Date)
   const filteredApps = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
     return apps.filter((app) => {
-      const matchesSearch = !q ||
-        (app.name || '').toLowerCase().includes(q) ||
-        (app.id || '').toLowerCase().includes(q) ||
-        (app.email || '').toLowerCase().includes(q);
-
       const appGender = (app.gender || '').toLowerCase();
       const matchesGender =
         genderFilter === 'All' ||
         appGender === genderFilter.toLowerCase();
 
       let matchesDate = true;
-      if (app.raw?.created_at) {
-        const appDate = new Date(app.raw.created_at);
+      if (app.created_at) {
+        const appDate = new Date(app.created_at);
         if (dateFrom) {
           const from = new Date(`${dateFrom}T00:00:00`);
           if (appDate < from) matchesDate = false;
@@ -101,16 +93,64 @@ const ApplicationsList = () => {
         matchesDate = false;
       }
 
-      return matchesSearch && matchesGender && matchesDate;
+      return matchesGender && matchesDate;
     });
-  }, [apps, searchQuery, genderFilter, dateFrom, dateTo]);
+  }, [apps, genderFilter, dateFrom, dateTo]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, genderFilter, dateFrom, dateTo]);
-
-  const total = filteredApps.length;
-  const paginated = filteredApps.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const columns = useMemo(() => [
+    {
+      header: "Student Name",
+      accessor: "name",
+      sortable: true,
+      filterable: true,
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px]">
+            {value?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+          </div>
+          <div>
+            <p className="font-bold text-slate-800">{value}</p>
+            <p className="text-[10px] text-slate-500">{row.gender} • {row.community}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      header: "Application No",
+      accessor: "id",
+      sortable: true,
+      filterable: true,
+      render: (value) => <span className="font-semibold text-blue-600">{value}</span>
+    },
+    {
+      header: "Contact",
+      accessor: "email",
+      filterable: true,
+      render: (value, row) => (
+        <div>
+          <p className="text-xs text-slate-700">{value || '—'}</p>
+          <p className="text-[10px] text-slate-500">{row.mobile || '—'}</p>
+        </div>
+      )
+    },
+    getDateColumn("Submitted", "created_at"),
+    {
+      header: "Documents",
+      accessor: "documents",
+      render: (_, row) => (
+        <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+          <DocumentLink path={row.photo} label="Photo" />
+          <DocumentLink path={row.transfer_certificate} label="TC" />
+          <DocumentLink path={row.marksheet_certificate} label="Marks" />
+          <DocumentLink path={row.community_certificate} label="Comm" />
+          <DocumentLink path={row.experience_certificate || row.experinece_certificate} label="Exp" />
+        </div>
+      )
+    },
+    getActionColumn({
+      onView: (row) => navigate(`/college/applications/${row.db_id}`)
+    })
+  ], [navigate]);
 
   return (
     <MainLayout role="college">
@@ -122,123 +162,49 @@ const ApplicationsList = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="text"
-                placeholder="Search by student name, application no, email..."
-                className="w-full bg-slate-50 border border-slate-200 py-3 pl-12 pr-4 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+        {/* Custom Filters */}
+        <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gender:</label>
             <select
               value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 py-3 px-3 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all text-slate-700"
+              className="bg-slate-50 border border-slate-100 py-2 px-3 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all text-slate-700"
             >
-              <option value="All">All Gender</option>
+              <option value="All">All</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
               <option value="Other">Other</option>
             </select>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 py-3 px-3 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all text-slate-700"
-              title="From date"
-            />
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 py-3 px-3 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all text-slate-700"
-              title="To date"
-            />
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-xs font-bold text-slate-800 uppercase tracking-widest border-b border-slate-100">
-                  <th className="px-4 py-4">Student Name</th>
-                  <th className="px-4 py-4">Application No</th>
-                  <th className="px-4 py-4">Contact</th>
-                  <th className="px-4 py-4">Submitted</th>
-                  <th className="px-4 py-4">Documents</th>
-                  <th className="px-4 py-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {loading ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400">Loading student applications...</td>
-                  </tr>
-                ) : paginated.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400">No applications match your criteria.</td>
-                  </tr>
-                ) : paginated.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
-                          {app.name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-800">{app.name}</p>
-                          <p className="text-xs text-slate-500">{app.gender} • {app.community}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-sm font-semibold text-blue-600">{app.id}</td>
-                    <td className="px-4 py-4">
-                      <p className="text-sm text-slate-700">{app.email || '—'}</p>
-                      <p className="text-xs text-slate-500">{app.mobile || '—'}</p>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-slate-600">
-                      {formatDate(app.raw?.created_at || app.date)}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-2 max-w-[240px]">
-                        <DocumentLink path={app.raw?.photo} label="Photo" />
-                        <DocumentLink path={app.raw?.transfer_certificate} label="TC" />
-                        <DocumentLink path={app.raw?.marksheet_certificate} label="Marksheet" />
-                        <DocumentLink path={app.raw?.community_certificate} label="Community" />
-                        <DocumentLink path={app.raw?.experience_certificate || app.raw?.experinece_certificate} label="Experience" />
-                       
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <button
-                        onClick={() => navigate(`/college/applications/${app.db_id}`)}
-                        className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100"
-                      >
-                        <Eye size={14} />
-                        Application
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          
+          <div className="flex items-center gap-2 ml-auto">
+             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date Range:</label>
+             <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="bg-slate-50 border border-slate-100 py-2 px-3 rounded-xl text-xs font-bold focus:outline-none text-slate-700"
+                title="From date"
+              />
+              <span className="text-slate-300">to</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="bg-slate-50 border border-slate-100 py-2 px-3 rounded-xl text-xs font-bold focus:outline-none text-slate-700"
+                title="To date"
+              />
           </div>
-
-          {total > PAGE_SIZE && (
-            <div className="mt-6 flex justify-between items-center">
-              <p className="text-xs text-slate-500">Showing {paginated.length} of {total}</p>
-              <div className="flex gap-2">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 disabled:opacity-40">Prev</button>
-                <button onClick={() => setPage(p => p + 1)} disabled={page * PAGE_SIZE >= total}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 disabled:opacity-40">Next</button>
-              </div>
-            </div>
-          )}
         </div>
+
+        <DataTable
+          rowKey="id"
+          columns={columns}
+          data={filteredApps}
+          isLoading={loading}
+          emptyMessage="No applications match your criteria."
+        />
       </div>
     </MainLayout>
   );

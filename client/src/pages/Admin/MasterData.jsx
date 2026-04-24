@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import { 
-  Plus, Search, Trash2, 
-  Layers, MapPin, X, AlertCircle, AlertTriangle, IndianRupee, PencilLine
+  Plus, Layers, MapPin, X, AlertCircle, AlertTriangle, IndianRupee
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
+import DataTable from '../../components/DataTable';
+import { getActionColumn } from '../../utils/tableHelpers';
 
 const MasterData = () => {
   const [activeTab, setActiveTab] = useState('districts');
@@ -15,7 +16,6 @@ const MasterData = () => {
   const [religions, setReligions] = useState([]);
   const [fees, setFees] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -166,21 +166,53 @@ const MasterData = () => {
     { id: 'fees', title: 'Fees master', icon: <IndianRupee size={18} />, count: fees.length },
   ];
 
-  const currentData = activeTab === 'districts' ? districts : activeTab === 'communities' ? communities : activeTab === 'religions' ? religions : fees;
-  
-  const filteredData = currentData.filter((item) => {
+  const currentData = useMemo(() => {
+    switch (activeTab) {
+      case 'districts': return districts;
+      case 'communities': return communities;
+      case 'religions': return religions;
+      case 'fees': return fees;
+      default: return [];
+    }
+  }, [activeTab, districts, communities, religions, fees]);
+
+  const columns = useMemo(() => {
+    const baseColumns = [];
+    
     if (activeTab === 'districts') {
-      return item.district_name.toLowerCase().includes(searchQuery.toLowerCase());
+      baseColumns.push(
+        { header: "District Name", accessor: "district_name", sortable: true, filterable: true },
+        { header: "State", accessor: "state_name", sortable: true, filterable: true }
+      );
+    } else if (activeTab === 'communities') {
+      baseColumns.push({ header: "Community Name", accessor: "community_name", sortable: true, filterable: true });
+    } else if (activeTab === 'religions') {
+      baseColumns.push({ header: "Religion Name", accessor: "religion_name", sortable: true, filterable: true });
+    } else if (activeTab === 'fees') {
+      baseColumns.push(
+        { header: "Community", accessor: "community", sortable: true, filterable: true },
+        { 
+          header: "Fees", 
+          accessor: "fees", 
+          sortable: true, 
+          filterable: true,
+          render: (val) => <span className="font-bold text-blue-700">₹{Number(val || 0).toLocaleString()}</span>
+        }
+      );
     }
-    if (activeTab === 'communities') {
-      return item.community_name.toLowerCase().includes(searchQuery.toLowerCase());
-    }
-    if (activeTab === 'religions') {
-      return item.religion_name.toLowerCase().includes(searchQuery.toLowerCase());
-    }
-    const hay = `${item.community || ''} ${item.fees ?? ''}`.toLowerCase();
-    return hay.includes(searchQuery.toLowerCase());
-  });
+
+    baseColumns.push(getActionColumn({
+      onEdit: activeTab === 'fees' ? openEditFeeModal : null,
+      onDelete: (row) => handleDelete(row.id, 
+        activeTab === 'districts' ? row.district_name : 
+        activeTab === 'communities' ? row.community_name : 
+        activeTab === 'religions' ? row.religion_name : 
+        `${row.community} (₹${row.fees})`
+      )
+    }));
+
+    return baseColumns;
+  }, [activeTab]);
 
   return (
     <MainLayout role="admin">
@@ -201,7 +233,7 @@ const MasterData = () => {
             className="btn-primary flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-blue-100"
           >
             <Plus size={18} />{' '}
-            {activeTab === 'districts' ? 'Add New District' : activeTab === 'communities' ? 'Add New Community' : activeTab === 'religions' ? 'Add New Religion' : 'Add community fee'}
+            {activeTab === 'districts' ? 'Add District' : activeTab === 'communities' ? 'Add Community' : activeTab === 'religions' ? 'Add Religion' : 'Add Fee'}
           </button>
         </div>
 
@@ -211,7 +243,7 @@ const MasterData = () => {
             {categories.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => { setActiveTab(cat.id); setSearchQuery(''); }}
+                onClick={() => setActiveTab(cat.id)}
                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all duration-200 ${
                   activeTab === cat.id 
                   ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-[1.02]' 
@@ -236,106 +268,22 @@ const MasterData = () => {
                 <span className="font-bold text-sm uppercase tracking-wider">Quick Note</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                Districts and communities drive dropdowns on the student form. Fees master sets the application amount by community name (use 0 for waiver).
+                Districts and communities drive dropdowns on the student form. Fees master sets the application amount by community name.
               </p>
             </div>
           </div>
 
           {/* List Content */}
           <div className="flex-1">
-            <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm min-h-[500px]">
-              <div className="relative mb-8">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                <input 
-                  type="text" 
-                  placeholder={`Search ${activeTab === 'districts' ? 'districts' : activeTab === 'communities' ? 'communities' : activeTab === 'religions' ? 'religions' : 'fees'}...`} 
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl font-medium focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="font-bold text-sm tracking-widest uppercase">Fetching Data...</span>
-                </div>
-              ) : filteredData.length > 0 ? (
-                <div className="grid md:grid-cols-2 gap-3">
-                  {filteredData.map((item, i) => (
-                    <motion.div 
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.02 }}
-                      key={activeTab === 'fees' ? `fee-${item.id}` : item.id} 
-                      className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-50 hover:border-blue-100 hover:shadow-md transition-all group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-blue-50 flex items-center justify-center font-black text-slate-300 group-hover:text-blue-200 text-xs transition-colors tracking-tighter">
-                          {String(i + 1).padStart(2, '0')}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-800 tracking-tight">
-                            {activeTab === 'districts'
-                              ? item.district_name
-                              : activeTab === 'communities'
-                                ? item.community_name
-                                : activeTab === 'religions'
-                                  ? item.religion_name
-                                  : item.community}
-                          </p>
-                          {activeTab === 'districts' && (
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{item.state_name}</p>
-                          )}
-                          {activeTab === 'fees' && (
-                            <p className="text-sm font-black text-blue-700 mt-0.5">
-                              {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(item.fees) || 0)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {activeTab === 'fees' && (
-                          <button
-                            type="button"
-                            onClick={() => openEditFeeModal(item)}
-                            className="p-2.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                            title="Edit fee"
-                          >
-                            <PencilLine size={18} />
-                          </button>
-                        )}
-                        <button 
-                          onClick={() =>
-                            handleDelete(
-                              item.id,
-                              activeTab === 'districts'
-                                ? item.district_name
-                                : activeTab === 'communities'
-                                  ? item.community_name
-                                  : activeTab === 'religions'
-                                    ? item.religion_name
-                                    : `${item.community} (₹${item.fees})`
-                            )
-                          }
-                          className="p-2.5 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-300">
-                   <div className="p-6 bg-slate-50 rounded-full mb-4">
-                     <Search size={40} className="opacity-20" />
-                   </div>
-                   <p className="font-bold tracking-tight">No results found for your search</p>
-                </div>
-              )}
-            </div>
+            <DataTable
+              rowKey="id"
+              columns={columns}
+              data={currentData}
+              isLoading={loading}
+              className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden"
+              emptyMessage={`No ${activeTab} found.`}
+              showSelection={false}
+            />
           </div>
         </div>
       </div>
@@ -377,7 +325,7 @@ const MasterData = () => {
                       </h2>
                       <p className="text-sm font-medium text-slate-400">
                         {activeTab === 'fees'
-                          ? 'Match community name exactly as on the application form (e.g. BC, MBC, SC). Use 0 for no payment.'
+                          ? 'Match community name exactly as on the application form.'
                           : 'Create a new lookup entry'}
                       </p>
                     </div>

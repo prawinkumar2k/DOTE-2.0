@@ -16,6 +16,7 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
+import { BarChart3 } from 'lucide-react';
 
 export const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'];
 
@@ -28,22 +29,24 @@ function stackKey(label, idx) {
 }
 
 const CHART_TITLE_MAP = {
-  date: 'Line chart — registrations by date',
-  date_collection: 'Gradient area chart — collection by date',
-  gender: 'Donut chart — gender distribution',
-  community: 'Pie chart — community distribution',
-  admission_type: 'Pie chart — admission type distribution',
-  college: 'Horizontal bar chart — by institution',
-  college_collection: 'Horizontal bar chart + ranking — college collection',
-  district: 'Bar chart — district (last institution)',
-  hostel: 'Stacked bar chart — hostel requirement',
+  date: 'Registrations by Date',
+  date_collection: 'Collection by Date',
+  gender: 'Gender Distribution',
+  community: 'Community Distribution',
+  admission_type: 'Admission Type Distribution',
+  college: 'Top Institutions by Volume',
+  college_collection: 'Top Institutions by Collection',
+  district: 'District-wise Distribution',
+  hostel: 'Hostel Requirement Analysis',
 };
 
 const tooltipStyle = {
-  borderRadius: '0.75rem',
+  borderRadius: '1rem',
   border: 'none',
-  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+  boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
   fontWeight: 700,
+  fontSize: '12px',
+  padding: '12px'
 };
 
 /**
@@ -59,44 +62,63 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
 
   /** Date-wise / date collection APIs return one row per student; charts aggregate by registration date. */
   const chartInputRows = useMemo(() => {
+    if (loading || !rows || rows.length === 0) return [];
+
     if (reportType === 'date') {
       const map = new Map();
       for (const r of rows) {
-        map.set(r.label, (map.get(r.label) || 0) + Number(r.count || 1));
+        const label = r.label || 'Unknown';
+        map.set(label, (map.get(label) || 0) + Number(r.count || 1));
       }
       return [...map.entries()]
         .map(([label, count]) => ({ label, count }))
-        .sort((a, b) => String(a.label).localeCompare(String(b.label)));
+        .sort((a, b) => {
+          // Try date sort if possible
+          try {
+            const da = new Date(a.label.split('-').reverse().join('-'));
+            const db = new Date(b.label.split('-').reverse().join('-'));
+            if (!isNaN(da) && !isNaN(db)) return da - db;
+          } catch(e) {}
+          return String(a.label).localeCompare(String(b.label));
+        });
     }
     if (reportType === 'date_collection') {
       const map = new Map();
       for (const r of rows) {
-        map.set(r.label, (map.get(r.label) || 0) + Number(r.count || 0));
+        const label = r.label || 'Unknown';
+        map.set(label, (map.get(label) || 0) + Number(r.count || 0));
       }
       return [...map.entries()]
         .map(([label, count]) => ({ label, count }))
-        .sort((a, b) => String(a.label).localeCompare(String(b.label)));
+        .sort((a, b) => {
+          try {
+            const da = new Date(a.label.split('-').reverse().join('-'));
+            const db = new Date(b.label.split('-').reverse().join('-'));
+            if (!isNaN(da) && !isNaN(db)) return da - db;
+          } catch(e) {}
+          return String(a.label).localeCompare(String(b.label));
+        });
     }
     return rows;
-  }, [reportType, rows]);
+  }, [reportType, rows, loading]);
 
   const chartData = useMemo(
     () =>
       chartInputRows.map((r) => ({
-        name: r.label.length > 24 ? `${r.label.slice(0, 22)}…` : r.label,
-        fullLabel: r.label,
-        count: r.count,
+        name: r.label?.length > 20 ? `${r.label.slice(0, 18)}…` : (r.label || '—'),
+        fullLabel: r.label || '—',
+        count: Number(r.count || 0),
       })),
     [chartInputRows]
   );
 
-  const pieData = useMemo(() => chartInputRows.map((r) => ({ name: r.label, value: r.count })), [chartInputRows]);
+  const pieData = useMemo(() => chartInputRows.map((r) => ({ name: r.label || '—', value: Number(r.count || 0) })), [chartInputRows]);
 
   const hostelStackData = useMemo(() => {
-    if (!rows.length) return { data: [], keys: [] };
+    if (!rows || !rows.length) return { data: [], keys: [] };
     const keys = rows.map((r, i) => stackKey(r.label, i));
     const row = rows.reduce((acc, r, i) => {
-      acc[keys[i]] = r.count;
+      acc[keys[i]] = Number(r.count || 0);
       return acc;
     }, {});
     row.name = 'Hostel requirement';
@@ -105,71 +127,68 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
 
   const chartHeight = useMemo(() => {
     if (variant === 'admin' && (reportType === 'college' || reportType === 'college_collection') && chartInputRows.length) {
-      return Math.min(Math.max(120 + chartInputRows.length * 30, 360), 960);
+      return Math.min(Math.max(120 + chartInputRows.length * 35, 400), 1200);
     }
-    if (reportType === 'gender') return 270;
-    if (reportType === 'community') return 330;
-    return 380;
-  }, [reportType, chartInputRows.length, rows.length, variant]);
+    return 450;
+  }, [reportType, chartInputRows.length, variant]);
 
-  const chartTitle = CHART_TITLE_MAP[reportType] || 'Chart';
+  const chartTitle = CHART_TITLE_MAP[reportType] || 'Statistical Analysis';
 
   const renderChart = () => {
-    if (loading || !rows.length) return null;
+    if (!chartData || chartData.length === 0) return null;
 
     const showCollegeChart = variant === 'admin' && (reportType === 'college' || reportType === 'college_collection');
 
     switch (reportType) {
       case 'date':
         return (
-          <LineChart data={chartData} margin={{ top: 12, right: 16, left: 0, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+          <LineChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} axisLine={false} tickLine={false} dy={10} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} axisLine={false} tickLine={false} dx={-10} />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(v) => [v, 'Count']}
+              cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+              formatter={(v) => [v, 'Applications']}
               labelFormatter={(_, items) => items?.[0]?.payload?.fullLabel || ''}
             />
-            <Legend />
             <Line
               type="monotone"
               dataKey="count"
-              name="Applications"
-              stroke="#2563eb"
-              strokeWidth={3}
-              dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
-              activeDot={{ r: 6 }}
+              stroke="#3b82f6"
+              strokeWidth={4}
+              dot={{ r: 5, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 8, strokeWidth: 0 }}
+              animationDuration={1500}
             />
           </LineChart>
         );
       case 'date_collection':
         return (
-          <AreaChart data={chartData} margin={{ top: 12, right: 16, left: 0, bottom: 8 }}>
+          <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
             <defs>
               <linearGradient id="collectionGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.85} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-            <YAxis allowDecimals tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} axisLine={false} tickLine={false} dy={10} />
+            <YAxis allowDecimals tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} axisLine={false} tickLine={false} dx={-10} />
             <Tooltip
               contentStyle={tooltipStyle}
               formatter={(v) => [formatCurrency(v), 'Collection']}
               labelFormatter={(_, items) => items?.[0]?.payload?.fullLabel || ''}
             />
-            <Legend />
             <Area
               type="monotone"
               dataKey="count"
-              name="Collection"
-              stroke="#059669"
-              strokeWidth={3}
+              stroke="#10b981"
+              strokeWidth={4}
               fill="url(#collectionGradient)"
-              dot={{ r: 3.5, fill: '#059669', stroke: '#fff', strokeWidth: 1.5 }}
-              activeDot={{ r: 6 }}
+              dot={{ r: 4, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
+              activeDot={{ r: 7, strokeWidth: 0 }}
+              animationDuration={1500}
             />
           </AreaChart>
         );
@@ -182,19 +201,18 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
               dataKey="value"
               nameKey="name"
               cx="50%"
-              cy="46%"
-              innerRadius={52}
-              outerRadius={82}
-              paddingAngle={2}
-              label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-              labelLine={{ stroke: '#94a3b8' }}
+              cy="50%"
+              innerRadius={80}
+              outerRadius={120}
+              paddingAngle={8}
+              animationDuration={1000}
             >
               {pieData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={2} />
+                <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
               ))}
             </Pie>
-            <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [v, n]} />
-            <Legend verticalAlign="bottom" height={36} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend verticalAlign="bottom" height={36} iconType="circle" />
           </PieChart>
         );
 
@@ -209,16 +227,18 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
               cx="50%"
               cy="50%"
               innerRadius={0}
-              outerRadius={130}
-              paddingAngle={1}
-              label={({ name, percent }) => (percent > 0.06 ? `${(percent * 100).toFixed(0)}%` : '')}
+              outerRadius={140}
+              paddingAngle={2}
+              animationDuration={1000}
+              label={({ name, percent }) => percent > 0.05 ? `${name} (${(percent * 100).toFixed(0)}%)` : ''}
+              labelLine={{ stroke: '#e2e8f0', strokeWidth: 1 }}
             >
               {pieData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={1} />
+                <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={2} />
               ))}
             </Pie>
-            <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [v, n]} />
-            <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 11 }} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: '20px' }} />
           </PieChart>
         );
 
@@ -226,14 +246,14 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
       case 'college_collection':
         if (!showCollegeChart) return null;
         return (
-          <BarChart layout="vertical" data={chartData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+          <BarChart layout="vertical" data={chartData} margin={{ top: 10, right: 40, left: 10, bottom: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
             <YAxis
               type="category"
               dataKey="name"
-              width={148}
-              tick={{ fontSize: 9, fill: '#64748b' }}
+              width={160}
+              tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }}
               axisLine={false}
               tickLine={false}
             />
@@ -247,24 +267,18 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
             />
             <Bar
               dataKey="count"
-              name={reportType === 'college_collection' ? 'Collection' : 'Students'}
               fill="#3b82f6"
-              radius={[0, 6, 6, 0]}
-              barSize={18}
+              radius={[0, 10, 10, 0]}
+              barSize={20}
+              animationDuration={1500}
             >
               {chartData.map((_, i) => (
                 <Cell
-                  key={`rank-cell-${i}`}
+                  key={`cell-${i}`}
                   fill={
                     reportType === 'college_collection'
-                      ? i === 0
-                        ? '#f59e0b'
-                        : i === 1
-                          ? '#64748b'
-                          : i === 2
-                            ? '#fb923c'
-                            : '#3b82f6'
-                      : '#3b82f6'
+                      ? i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#fb923c' : '#3b82f6'
+                      : COLORS[i % COLORS.length]
                   }
                 />
               ))}
@@ -274,35 +288,35 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
 
       case 'district':
         return (
-          <BarChart data={chartData} margin={{ top: 12, right: 12, left: 0, bottom: 64 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+          <BarChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 80 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 9, fill: '#64748b' }}
+              tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
               interval={0}
-              angle={-35}
+              angle={-45}
               textAnchor="end"
-              height={72}
+              height={80}
               axisLine={false}
               tickLine={false}
             />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} axisLine={false} tickLine={false} />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(v) => [v, 'Count']}
+              formatter={(v) => [v, 'Applications']}
               labelFormatter={(_, items) => items?.[0]?.payload?.fullLabel || ''}
             />
-            <Bar dataKey="count" name="Applications" fill="#6366f1" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} barSize={30} animationDuration={1500} />
           </BarChart>
         );
 
       case 'hostel': {
         const { data, keys } = hostelStackData;
         return (
-          <BarChart data={data} margin={{ top: 16, right: 24, left: 8, bottom: 48 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+          <BarChart data={data} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} axisLine={false} tickLine={false} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={tooltipStyle} />
             <Legend />
             {rows.map((r, i) => (
@@ -312,15 +326,8 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
                 name={r.label}
                 stackId="hostel"
                 fill={COLORS[i % COLORS.length]}
-                radius={
-                  rows.length === 1
-                    ? [6, 6, 6, 6]
-                    : i === 0
-                      ? [0, 0, 4, 4]
-                      : i === rows.length - 1
-                        ? [4, 4, 0, 0]
-                        : [0, 0, 0, 0]
-                }
+                radius={i === rows.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
+                animationDuration={1500}
               />
             ))}
           </BarChart>
@@ -333,20 +340,38 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 min-h-[320px] flex flex-col">
-      <h2 className="font-bold text-slate-900 mb-1">{chartTitle}</h2>
-      <p className="text-xs text-slate-400 mb-4 font-medium">{payloadTitle || '—'}</p>
-      {!loading && rows.length > 0 ? (
-        <div className="flex-1 w-full" style={{ height: chartHeight, minHeight: 280 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            {renderChart()}
-          </ResponsiveContainer>
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-slate-400 text-sm font-medium min-h-[280px]">
-          {loading ? 'Loading chart…' : 'No data for chart'}
-        </div>
-      )}
+    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 h-full flex flex-col min-h-[500px]">
+      <div className="mb-8">
+        <h2 className="text-xl font-black text-slate-900 tracking-tight">{chartTitle}</h2>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">{payloadTitle || 'Visualization'}</p>
+      </div>
+
+      <div className="flex-1 w-full relative">
+        {!loading && chartData.length > 0 ? (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+             <ResponsiveContainer width="100%" height="100%">
+               {renderChart()}
+             </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-4">
+            {loading ? (
+              <>
+                <div className="w-10 h-10 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin" />
+                <span className="text-sm font-bold uppercase tracking-widest">Generating Chart…</span>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
+                  <BarChart3 size={32} className="opacity-20" />
+                </div>
+                <span className="text-sm font-bold">No statistical data to visualize</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+

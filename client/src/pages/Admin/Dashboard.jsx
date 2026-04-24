@@ -1,9 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
-import { Users, Building, FileText, ShieldCheck, Activity, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Users, Building, FileText, ShieldCheck, Activity } from 'lucide-react';
 import axios from 'axios';
 import { formatDate } from '../../utils/dateUtils';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar } from 'recharts';
+import DataTable from '../../components/DataTable';
+import { getStatusColumn } from '../../utils/tableHelpers';
 
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899'];
 
@@ -50,6 +52,19 @@ const AdminDashboard = () => {
     { label: 'Admin Users', value: Number(stats.totalUsers || 0), icon: <ShieldCheck size={18} />, tone: 'violet' },
   ];
 
+  const recentColumns = [
+    {
+      header: "Student",
+      accessor: "student_name",
+      render: (value) => <span className="font-bold text-slate-800">{value || 'Anonymous'}</span>
+    },
+    {
+      header: "Application No",
+      accessor: "application_no",
+      render: (value) => <span className="font-semibold text-blue-700">{value || 'Draft'}</span>
+    },
+    getStatusColumn("application_status")
+  ];
 
   if (loading) {
     return (
@@ -176,36 +191,17 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h2 className="font-bold text-slate-800">Recent Activity</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-xs text-slate-500 uppercase border-b border-slate-100">
-                  <th className="px-5 py-3">Student</th>
-                  <th className="px-5 py-3">Application No</th>
-                  <th className="px-5 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {recentActivity.length > 0 ? (
-                  recentActivity.map((row, idx) => (
-                    <tr key={`${row.id || idx}`} className="hover:bg-slate-50">
-                      <td className="px-5 py-3 text-sm font-semibold text-slate-800">{row.student_name || 'Anonymous'}</td>
-                      <td className="px-5 py-3 text-sm text-blue-700 font-semibold">{row.application_no || 'Draft'}</td>
-                      <td className="px-5 py-3"><StatusBadge value={row.application_status} /></td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="3" className="px-5 py-8 text-center text-sm text-slate-400">No recent activity.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden p-6">
+           <h2 className="font-bold text-slate-800 mb-6 px-2">Recent Activity</h2>
+           <DataTable
+             rowKey="id"
+             data={recentActivity}
+             columns={recentColumns}
+             showToolbar={false}
+             showPagination={false}
+             showSelection={false}
+             emptyMessage="No recent activity."
+           />
         </div>
       </div>
     </MainLayout>
@@ -232,13 +228,6 @@ const StatCard = ({ label, value, icon, tone }) => {
       </div>
     </div>
   );
-};
-
-const StatusBadge = ({ value }) => {
-  const status = String(value || 'Draft').toLowerCase();
-  if (status === 'approved') return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100"><CheckCircle2 size={12} /> Approved</span>;
-  if (status === 'rejected') return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100"><XCircle size={12} /> Rejected</span>;
-  return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100"><Clock size={12} /> {value || 'Pending'}</span>;
 };
 
 export default AdminDashboard;

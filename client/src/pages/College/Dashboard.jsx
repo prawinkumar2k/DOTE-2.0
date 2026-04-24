@@ -5,6 +5,8 @@ import MainLayout from '../../components/layout/MainLayout';
 import { FileText, Clock, Download, ArrowUpRight, MapPin, User2 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
 import { Link } from 'react-router-dom';
+import DataTable from '../../components/DataTable';
+import { getStatusColumn } from '../../utils/tableHelpers';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
@@ -27,7 +29,6 @@ const CollegeDashboard = () => {
     };
     fetchDashboard();
   }, []);
-
 
   const stats = data?.stats || {};
   const timelineData = data?.timelineData || [];
@@ -52,6 +53,32 @@ const CollegeDashboard = () => {
     ],
     [stats]
   );
+
+  const recentColumns = [
+    {
+      header: "Student",
+      accessor: "student_name",
+      render: (value) => (
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center">
+            <User2 size={14} />
+          </div>
+          <span className="text-sm font-semibold text-slate-800">{value || 'Anonymous'}</span>
+        </div>
+      )
+    },
+    {
+      header: "Application No",
+      accessor: "application_no",
+      render: (value, row) => <span className="text-sm text-blue-700 font-semibold">{value || `APP-${row.id}`}</span>
+    },
+    {
+      header: "Submitted",
+      accessor: "created_at",
+      render: (value) => <span className="text-sm text-slate-600">{formatDateTime(value)}</span>
+    },
+    getStatusColumn("application_status")
+  ];
 
   if (loading) {
     return (
@@ -206,55 +233,26 @@ const CollegeDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden p-6">
+          <div className="flex items-center justify-between mb-6 px-2">
             <div>
               <h2 className="text-base font-bold text-slate-800">Recent Applications</h2>
               <p className="text-xs text-slate-500">Latest submissions available for this college</p>
             </div>
-            <Link to="/college/applications" className="text-sm font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
-              View all <ArrowUpRight size={14} />
+            <Link to="/college/applications" className="text-sm font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 inline-flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-xl transition-all active:scale-95">
+              View all <ArrowUpRight size={16} />
             </Link>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-xs font-bold text-slate-500 uppercase border-b border-slate-100">
-                  <th className="px-5 py-3">Student</th>
-                  <th className="px-5 py-3">Application No</th>
-                  <th className="px-5 py-3">Submitted</th>
-                  <th className="px-5 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {recentApps.length > 0 ? (
-                  recentApps.slice(0, 6).map((app, idx) => (
-                    <tr key={`${app.id || idx}`} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center">
-                            <User2 size={14} />
-                          </div>
-                          <span className="text-sm font-semibold text-slate-800">{app.student_name || 'Anonymous'}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-blue-700 font-semibold">{app.application_no || `APP-${app.id}`}</td>
-                      <td className="px-5 py-3 text-sm text-slate-600">{formatDateTime(app.created_at)}</td>
-                      <td className="px-5 py-3">
-                        <StatusBadge value={app.application_status || 'Submitted'} />
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="4" className="px-5 py-8 text-center text-slate-400 text-sm">
-                      No recent applications found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          
+          <DataTable
+            rowKey="id"
+            data={recentApps.slice(0, 6)}
+            columns={recentColumns}
+            showToolbar={false}
+            showPagination={false}
+            showSelection={false}
+            emptyMessage="No recent applications found."
+          />
         </div>
       </div>
     </MainLayout>
@@ -292,22 +290,6 @@ const StatCard = ({ icon, label, value, tone }) => {
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${toneClasses.wrap}`}>{icon}</div>
       </div>
     </div>
-  );
-};
-
-const StatusBadge = ({ value }) => {
-  const v = String(value || '').toLowerCase().trim();
-  if (v === 'approved') {
-    return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">Approved</span>;
-  }
-  if (v === 'rejected') {
-    return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100">Rejected</span>;
-  }
-  /** Pending and other non–decision states are shown as Submitted on the college dashboard. */
-  return (
-    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-      Submitted
-    </span>
   );
 };
 

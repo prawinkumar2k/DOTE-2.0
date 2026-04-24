@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Eye, EyeOff } from 'lucide-react';
 import loginBg from '../../assets/login_bg.png';
 import govtLogo from '../../assets/govt_logo.png';
 
@@ -74,6 +75,7 @@ const Register = () => {
   });
   const [toast, setToast] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -131,9 +133,9 @@ const Register = () => {
     <div className="min-h-screen w-full flex bg-white font-inter">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="hidden lg:flex lg:w-5/12 relative overflow-hidden bg-slate-900">
-        <img src={loginBg} alt="DOTE Bg" className="absolute inset-0 w-full h-full object-cover opacity-90" />
-        <div className="absolute inset-0 bg-linear-to-b from-blue-900/40 to-slate-900" />
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900">
+        <img src={loginBg} alt="DOTE Bg" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+        <div className="absolute inset-0 bg-linear-to-t from-slate-900 via-slate-900/40 to-transparent" />
         
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-4">
@@ -162,7 +164,7 @@ const Register = () => {
         </div>
       </div>
 
-      <div className="w-full lg:w-7/12 flex flex-col items-center justify-center p-6 sm:p-12 overflow-y-auto relative">
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 lg:p-10 overflow-y-auto relative">
         {/* Back to Home Button */}
         <button 
           onClick={() => navigate('/')}
@@ -174,13 +176,13 @@ const Register = () => {
           Home
         </button>
 
-        <div className="w-full max-lg space-y-8">
+        <div className="w-full max-w-xl space-y-4">
           <div className="text-center lg:text-left">
             <h2 className="text-3xl font-black text-slate-900 tracking-tight">Create Account</h2>
             <p className="text-slate-500 font-medium mt-2">Enter your details to begin the registration</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid sm:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
@@ -205,7 +207,7 @@ const Register = () => {
                     key={opt.value}
                     type="button"
                     onClick={() => setFormData(p => ({...p, admissionType: opt.value}))}
-                    className={`py-3 px-2 rounded-xl text-xs font-bold transition-all border ${
+                    className={`py-2.5 px-2 rounded-xl text-[11px] font-bold transition-all border ${
                       formData.admissionType === opt.value ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
                     }`}
                   >
@@ -218,26 +220,58 @@ const Register = () => {
             <div className="grid sm:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Password</label>
-                <input type="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="••••••••" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold outline-none focus:bg-white focus:border-blue-500 transition-all" />
+                <div className="relative group">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold outline-none focus:bg-white focus:border-blue-500 transition-all pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Confirm Password</label>
-                <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} placeholder="••••••••" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold outline-none focus:bg-white focus:border-blue-500 transition-all" />
+                <div className="relative group">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold outline-none focus:bg-white focus:border-blue-500 transition-all pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <button type="submit" disabled={isLoading} className="w-full bg-linear-to-r from-blue-600 to-indigo-700 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 text-xs uppercase tracking-[0.1em]">
+            <button type="submit" disabled={isLoading} className="w-full bg-linear-to-r from-blue-600 to-indigo-700 text-white font-black py-3.5 rounded-xl shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 text-xs uppercase tracking-[0.1em]">
               {isLoading ? 'Creating Account...' : 'Initialize Registration'}
             </button>
           </form>
 
-          <div className="pt-6 border-t border-slate-100 text-center">
+          <div className="pt-4 border-t border-slate-100 text-center">
              <p className="text-sm font-bold text-slate-400">
                Already registered? <button onClick={() => navigate('/login')} className="text-blue-600 hover:text-blue-800 transition-colors">Sign In Here</button>
              </p>
           </div>
 
-          <div className="text-center mt-6">
+          <div className="text-center mt-4">
              <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest hidden lg:block">
               Official Portal • Directorate of Technical Education
              </p>

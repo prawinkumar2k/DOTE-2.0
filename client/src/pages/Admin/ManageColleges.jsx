@@ -373,6 +373,7 @@ const ManageColleges = () => {
         {/* Colleges Table */}
         <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
           <DataTable 
+            rowKey="ins_code"
             columns={columns}
             data={colleges}
             isLoading={loading}

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import ReportChartBlock from '../../components/reports/ReportChartBlock';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { FileSpreadsheet, FileText, Filter, RefreshCw, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import DataTable from '../../components/DataTable';
 
 const ALL_REPORT_TABS = [
   { id: 'date', label: 'Date wise' },
@@ -123,6 +124,20 @@ const Reports = ({ role }) => {
     }
   };
 
+  const rows = payload?.rows || [];
+  const isDateWiseList = reportType === 'date';
+  const isDateCollectionList = reportType === 'date_collection';
+  const isStudentDetailTable = isDateWiseList || isDateCollectionList;
+  const isCollectionReport = reportType === 'date_collection' || reportType === 'college_collection';
+  const isCollegeCollection = reportType === 'college_collection';
+
+  const formatCollection = useCallback((value) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0)), []);
+
   const handlePdfExport = () => {
     if (!rows.length) return;
     navigate(previewPath, {
@@ -134,25 +149,11 @@ const Reports = ({ role }) => {
           tableTitle: payload?.title || 'Category',
           rows,
           collegeCode: payload?.collegeCode || payload?.meta?.collegeCode || '—',
-          shortNote: reportShortNote,
+          shortNote: `Report: ${REPORT_LABEL_MAP[reportType] || reportType}. Total: ${rows.length}`,
         },
       },
     });
   };
-
-  const rows = payload?.rows || [];
-  const isDateWiseList = reportType === 'date';
-  const isDateCollectionList = reportType === 'date_collection';
-  const isStudentDetailTable = isDateWiseList || isDateCollectionList;
-  const isCollectionReport = reportType === 'date_collection' || reportType === 'college_collection';
-  const isCollegeCollection = reportType === 'college_collection';
-
-  const formatCollection = (value) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(Number(value || 0));
 
   const headerTotalLabel = isDateWiseList ? 'Total records' : isCollectionReport ? 'Total collection' : 'Total count';
   const headerTotalValue = isDateWiseList
@@ -161,9 +162,91 @@ const Reports = ({ role }) => {
       ? formatCollection(payload?.totalCount ?? 0)
       : payload?.totalCount ?? '—';
 
-  const reportShortNote = `Report: ${REPORT_LABEL_MAP[reportType] || reportType}. Date range: ${dateFrom || 'All'
-    } to ${dateTo || 'All'}. Submitted only: ${submittedOnly ? 'Yes' : 'No'}. Total ${isDateWiseList ? 'records' : isCollectionReport ? 'collection' : 'count'
-    }: ${isDateWiseList ? payload?.totalCount ?? 0 : isCollectionReport ? formatCollection(payload?.totalCount ?? 0) : payload?.totalCount ?? 0}.`;
+  const columns = useMemo(() => {
+    if (isStudentDetailTable) {
+      const cols = [
+        {
+          header: "Sl.No",
+          accessor: "_sn",
+          width: "60px",
+          render: (_, __, i) => <span className="text-slate-400 font-mono text-xs">{i + 1}.</span>
+        },
+        {
+          header: "Date",
+          accessor: "label",
+          sortable: true,
+          filterable: true,
+          render: (val) => <span className="font-medium text-slate-700">{val}</span>
+        },
+        {
+          header: "Application Number",
+          accessor: "applicationNo",
+          sortable: true,
+          filterable: true,
+          render: (val) => <span className="font-bold text-blue-600">{val || '—'}</span>
+        },
+        {
+          header: "Student Name",
+          accessor: "studentName",
+          sortable: true,
+          filterable: true,
+          render: (val) => <span className="font-bold text-slate-800">{val || '—'}</span>
+        },
+        {
+          header: "Contact Number",
+          accessor: "contact",
+          filterable: true,
+          render: (val) => <span className="text-xs font-medium text-slate-500">{val || '—'}</span>
+        }
+      ];
+      if (isDateCollectionList) {
+        cols.push({
+          header: "Collection",
+          accessor: "count",
+          sortable: true,
+          render: (val) => <span className="font-black text-slate-900">{formatCollection(val)}</span>
+        });
+      }
+      return cols;
+    } else {
+      const cols = [
+        {
+          header: payload?.title || "Category",
+          accessor: "label",
+          sortable: true,
+          filterable: true,
+          render: (val) => <span className="font-bold text-slate-800">{val || '—'}</span>
+        }
+      ];
+      if (isCollegeCollection) {
+        cols.push({
+          header: "Rank",
+          accessor: "_rank",
+          width: "80px",
+          render: (_, __, i) => {
+            const rankStyles = [
+              'bg-amber-100 text-amber-900',
+              'bg-slate-200 text-slate-900',
+              'bg-orange-100 text-orange-900',
+            ];
+            const style = rankStyles[i] || 'bg-blue-50 text-blue-800';
+            return (
+              <span className={`inline-flex min-w-[28px] h-7 items-center justify-center rounded-full text-[11px] font-extrabold ${style}`}>
+                #{i + 1}
+              </span>
+            );
+          }
+        });
+      }
+      cols.push({
+        header: isCollectionReport ? "Collection" : "Count",
+        accessor: "count",
+        sortable: true,
+        render: (val) => <span className="font-black text-slate-900">{isCollectionReport ? formatCollection(val) : val}</span>
+      });
+      return cols;
+    }
+  }, [isStudentDetailTable, isDateCollectionList, isCollegeCollection, isCollectionReport, payload, formatCollection]);
 
   return (
     <MainLayout role={role}>
@@ -184,7 +267,7 @@ const Reports = ({ role }) => {
               type="button"
               onClick={load}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold hover:bg-slate-50 disabled:opacity-50 transition-all"
             >
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -193,7 +276,7 @@ const Reports = ({ role }) => {
               type="button"
               onClick={handleExport}
               disabled={loading || !rows.length}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-sm hover:bg-emerald-700 disabled:opacity-50`}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-all`}
             >
               <FileSpreadsheet size={16} />
               Download Excel
@@ -202,7 +285,7 @@ const Reports = ({ role }) => {
               type="button"
               onClick={handlePdfExport}
               disabled={loading || !rows.length}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-sm hover:bg-slate-800 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-sm hover:bg-slate-800 disabled:opacity-50 transition-all"
             >
               <FileText size={16} />
               Download PDF
@@ -226,164 +309,70 @@ const Reports = ({ role }) => {
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 md:p-8">
-          <div className="flex items-center gap-2 text-slate-800 font-bold text-sm mb-4">
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-4 sm:p-6 md:p-8">
+          <div className="flex items-center gap-2 text-slate-800 font-bold text-sm mb-6">
             <Filter size={16} className="text-slate-400" />
-            Filters
+            Report Filters
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <label className="space-y-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">From date</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">From date</span>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:ring-2 ${ringColor}`}
+                className={`w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:ring-4 ${ringColor} transition-all`}
               />
             </label>
             <label className="space-y-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">To date</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">To date</span>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:ring-2 ${ringColor}`}
+                className={`w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:ring-4 ${ringColor} transition-all`}
               />
             </label>
-            <label className="flex items-center gap-3 sm:col-span-2 lg:col-span-2 rounded-xl border border-slate-200 px-4 py-3 cursor-pointer hover:bg-slate-50/80">
+            <label className="flex items-center gap-4 sm:col-span-2 lg:col-span-2 rounded-[1.5rem] border border-slate-200 px-6 py-4 cursor-pointer hover:bg-slate-50/80 transition-all mt-auto h-[52px]">
               <input
                 type="checkbox"
                 checked={submittedOnly}
                 onChange={(e) => setSubmittedOnly(e.target.checked)}
-                className={`rounded border-slate-300 ${isAdmin ? 'text-blue-600 focus:ring-blue-500' : 'text-emerald-600 focus:ring-emerald-500'}`}
+                className={`w-5 h-5 rounded-lg border-slate-300 ${isAdmin ? 'text-blue-600 focus:ring-blue-500' : 'text-emerald-600 focus:ring-emerald-500'}`}
               />
-              <span className="text-sm font-semibold text-slate-700">Only students with an application number (submitted)</span>
+              <span className="text-sm font-bold text-slate-700">Only students with an application number (submitted)</span>
             </label>
           </div>
         </div>
 
-
-
-        <div className="grid 2xl:grid-cols-2 gap-8">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[320px] min-w-0">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-bold text-slate-900">{payload?.title || 'Report'}</h2>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                {headerTotalLabel}: {headerTotalValue}
-              </span>
+        <div className={`grid ${isStudentDetailTable ? 'grid-cols-1' : 'xl:grid-cols-2'} gap-8`}>
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[480px]">
+            <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">{payload?.title || 'Report Data'}</h2>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Detailed View</p>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{headerTotalLabel}</span>
+                <span className="text-lg font-black text-slate-900">{headerTotalValue}</span>
+              </div>
             </div>
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-3 text-slate-400 text-sm font-semibold">
-                <div className={`w-10 h-10 border-4 border-slate-100 ${isAdmin ? 'border-t-blue-600' : 'border-t-emerald-600'} rounded-full animate-spin`} />
-                Loading…
-              </div>
-            ) : rows.length === 0 ? (
-              <p className="p-8 text-center text-slate-500 text-sm font-medium">No records match these filters.</p>
-            ) : (
-              <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
-                <table className={`w-full text-sm ${isStudentDetailTable ? 'border border-slate-200' : ''}`}>
-                  <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
-                    <tr>
-                      {isStudentDetailTable ? (
-                        <>
-                          <th className="text-left px-3 py-3 font-bold text-slate-600 uppercase tracking-wider text-[10px] border-r border-slate-200 w-14">
-                            Sl.No
-                          </th>
-                          <th className="text-left px-3 py-3 font-bold text-slate-600 uppercase tracking-wider text-[10px] border-r border-slate-200">
-                            Date
-                          </th>
-                          <th className="text-left px-3 py-3 font-bold text-slate-600 uppercase tracking-wider text-[10px] border-r border-slate-200">
-                            Application number
-                          </th>
-                          <th className="text-left px-3 py-3 font-bold text-slate-600 uppercase tracking-wider text-[10px] border-r border-slate-200">
-                            Student name
-                          </th>
-                          <th className="text-left px-3 py-3 font-bold text-slate-600 uppercase tracking-wider text-[10px] border-r border-slate-200">
-                            Contact number
-                          </th>
-                          {isDateCollectionList && (
-                            <th className="text-right px-3 py-3 font-bold text-slate-600 uppercase tracking-wider text-[10px]">
-                              Collection
-                            </th>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <th className="text-left px-6 py-3 font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-                            {payload?.title || 'Dimension'}
-                          </th>
-                          {isCollegeCollection && (
-                            <th className="text-center px-3 py-3 font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-                              Rank
-                            </th>
-                          )}
-                          <th className="text-right px-6 py-3 font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-                            {isCollectionReport ? 'Collection' : 'Count'}
-                          </th>
-                        </>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isStudentDetailTable
-                      ? rows.map((r, i) => (
-                        <tr
-                          key={`${r.label}-${r.applicationNo}-${i}`}
-                          className="border-b border-slate-100 hover:bg-slate-50/60"
-                        >
-                          <td className="px-3 py-2.5 text-slate-700 font-semibold tabular-nums border-r border-slate-100">
-                            {i + 1}.
-                          </td>
-                          <td className="px-3 py-2.5 text-slate-800 font-medium whitespace-nowrap border-r border-slate-100">
-                            {r.label}
-                          </td>
-                          <td className="px-3 py-2.5 text-slate-800 font-medium tabular-nums border-r border-slate-100">
-                            {r.applicationNo}
-                          </td>
-                          <td className="px-3 py-2.5 text-slate-800 font-medium border-r border-slate-100">
-                            {r.studentName}
-                          </td>
-                          <td className="px-3 py-2.5 text-slate-800 font-medium tabular-nums border-r border-slate-100">
-                            {r.contact}
-                          </td>
-                          {isDateCollectionList && (
-                            <td className="px-3 py-2.5 text-right text-slate-900 font-bold tabular-nums">
-                              {formatCollection(r.count)}
-                            </td>
-                          )}
-                        </tr>
-                      ))
-                      : rows.map((r, i) => (
-                        <tr key={`${r.label}-${i}`} className="border-b border-slate-50 hover:bg-slate-50/60">
-                          <td className="px-6 py-3 text-slate-800 font-medium max-w-md">{r.label}</td>
-                          {isCollegeCollection && (
-                            <td className="px-3 py-3 text-center">
-                              <span
-                                className={`inline-flex min-w-[28px] h-7 items-center justify-center rounded-full text-[11px] font-extrabold ${i === 0
-                                  ? 'bg-amber-100 text-amber-900'
-                                  : i === 1
-                                    ? 'bg-slate-200 text-slate-900'
-                                    : i === 2
-                                      ? 'bg-orange-100 text-orange-900'
-                                      : 'bg-blue-50 text-blue-800'
-                                  }`}
-                              >
-                                #{i + 1}
-                              </span>
-                            </td>
-                          )}
-                          <td className="px-6 py-3 text-right font-bold text-slate-900 tabular-nums">
-                            {isCollectionReport ? formatCollection(r.count) : r.count}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            
+            <div className="p-2">
+              <DataTable
+                rowKey={isStudentDetailTable ? "applicationNo" : "label"}
+                columns={columns}
+                data={rows}
+                isLoading={loading}
+                showToolbar={false}
+                showSelection={false}
+                emptyMessage="No records match these filters."
+                className="border-none shadow-none"
+              />
+            </div>
           </div>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex flex-col">
             <ReportChartBlock
               variant={role}
               reportType={reportType}

@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(npm install *)",
-      "Bash(grep -E \"^d|\\\\.js$|\\\\.sql$\")"
-    ]
-  }
-}

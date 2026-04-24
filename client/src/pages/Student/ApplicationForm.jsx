@@ -52,7 +52,7 @@ const stepRequiredFields = {
 const defaultForm = {
   // Step 1
   fullName: '', dob: '', age: '', gender: '', aadhaar: '', religion: '', community: '', caste: '',
-  admissionType: 'First Year', motherTongue: '', mediumOfInstruction: '', nativity: '',
+  admissionType: 'First Year', motherTongue: '', nativity: '',
   citizenship: '', civicNative: '',
   // Step 2
   mobile: '', email: '', alternateMobile: '', commAddress: '', permAddress: '', sameAsComm: false,

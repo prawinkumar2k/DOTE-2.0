@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import loginBg from '../../assets/login_bg.png';
+import govtLogo from '../../assets/govt_logo.png';
 
 const Toast = ({ message, type = 'success', onClose }) => {
   useEffect(() => {
@@ -40,10 +42,8 @@ const Toast = ({ message, type = 'success', onClose }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        {/* Progress Bar */}
         <div className={`absolute bottom-0 left-0 h-1.5 ${progressColor} w-full animate-progress-shrink origin-left`}></div>
       </div>
-      
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes progress-shrink {
           from { transform: scaleX(1); }
@@ -60,7 +60,6 @@ const Toast = ({ message, type = 'success', onClose }) => {
 const Login = () => {
   const [role, setRole] = useState('student');
   const [formData, setFormData] = useState({ identifier: '', password: '' });
-  /** Student only: login | forgot | forgotSent */
   const [studentLoginView, setStudentLoginView] = useState('login');
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -72,26 +71,23 @@ const Login = () => {
   const roleConfigs = {
     admin: {
       title: 'Admin Login',
-      bgColor: 'from-purple-50 via-white to-pink-50',
-      accentColor: 'purple',
-      gradient: 'from-purple-600 to-purple-700',
-      tabActive: 'bg-purple-50 text-purple-600 border-purple-400',
+      accentColor: 'indigo',
+      gradient: 'from-indigo-600 to-indigo-800',
+      tabActive: 'bg-indigo-50 text-indigo-700 border-indigo-200',
       target: '/admin/dashboard'
     },
     college: {
       title: 'College Login',
-      bgColor: 'from-emerald-50 via-white to-teal-50',
-      accentColor: 'emerald',
-      gradient: 'from-emerald-600 to-emerald-700',
-      tabActive: 'bg-emerald-50 text-emerald-600 border-emerald-400',
+      accentColor: 'blue',
+      gradient: 'from-blue-600 to-blue-800',
+      tabActive: 'bg-blue-50 text-blue-700 border-blue-200',
       target: '/college/dashboard'
     },
     student: {
       title: 'Student Login',
-      bgColor: 'from-blue-50 via-white to-indigo-50',
       accentColor: 'blue',
-      gradient: 'from-blue-600 to-blue-700',
-      tabActive: 'bg-blue-50 text-blue-600 border-blue-400',
+      gradient: 'from-blue-600 to-indigo-700',
+      tabActive: 'bg-blue-50 text-blue-700 border-blue-200',
       target: '/student/apply'
     }
   };
@@ -149,238 +145,214 @@ const Login = () => {
         if (res.data.devResetLink && import.meta.env.DEV) {
           setForgotSentDevLink(res.data.devResetLink);
         }
-        setToast({
-          message: res.data.devHint ? `${res.data.message} (See dev link below.)` : res.data.message,
-          type: 'success',
-        });
+        setToast({ message: res.data.message, type: 'success' });
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Could not send reset email. Try again.';
-      setToast({ message: msg, type: 'error' });
+      setToast({ message: err.response?.data?.message || 'Error occurred', type: 'error' });
     } finally {
       setForgotLoading(false);
     }
   };
 
   return (
-    <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 py-10 relative overflow-hidden bg-linear-to-br transition-all duration-700 ease-in-out ${config.bgColor}`}>
-      
+    <div className="min-h-screen w-full flex bg-white font-inter">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Home Navigation Button */}
-      <button 
-        onClick={() => navigate('/')}
-        className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-md border border-gray-100 rounded-xl shadow-sm text-gray-600 hover:text-black hover:bg-white transition-all group active:scale-95"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001-1m-6 0h6" />
-        </svg>
-        <span className="text-sm font-bold uppercase tracking-wider">Home</span>
-      </button>
+      {/* Left Side: Professional Image Overlay */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900">
+        <img 
+          src={loginBg} 
+          alt="Government Education Portal" 
+          className="absolute inset-0 w-full h-full object-cover opacity-60"
+        />
+        <div className="absolute inset-0 bg-linear-to-t from-slate-900 via-slate-900/40 to-transparent" />
+        
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-2 rounded-xl shadow-lg">
+              <img src={govtLogo} alt="Govt Logo" className="h-12 w-auto" />
+            </div>
+            <div className="text-white">
+              <p className="text-2xl font-bold uppercase">DOTE - Admission Portal</p>
+              <p className="text-xl font-bold text-blue-300 tracking-[0.2em] uppercase">Government of Tamil Nadu</p>
+            </div>
+          </div>
 
-      {/* Role Tabs */}
-      <div className="relative z-10 mb-8 p-1 bg-white/70 backdrop-blur-sm border border-gray-100 rounded-full flex items-center shadow-sm">
-        {Object.keys(roleConfigs).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => {
-              setRole(tab);
-              setFormData({ identifier: '', password: '' });
-              setStudentLoginView('login');
-              setForgotEmail('');
-              setForgotSentDevLink('');
-            }}
-            className={`px-6 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-300 capitalize relative ${
-              role === tab ? `${roleConfigs[tab].tabActive} shadow-sm border-b-2` : 'text-gray-500 bg-transparent hover:bg-gray-100'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+          <div className="space-y-6">
+            <p className="text-4xl font-black text-white leading-tight uppercase tracking-tighter">
+              Tamil Nadu <br />
+              <span className="text-blue-400">Polytechnic Admissions</span>
+            </p>
+            <p className="text-xl text-slate-300 max-w-md font-semibold leading-relaxed">
+              Official single-window portal for merit-based admissions to Government and Government-Aided Polytechnic Colleges across the state.
+            </p>
+            <div className="flex items-center gap-8 pt-4">
+              <div>
+                <p className="text-3xl font-black text-white">400+</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Colleges</p>
+              </div>
+              <div className="w-px h-10 bg-white/10" />
+              <div>
+                <p className="text-3xl font-black text-white">50K+</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Applications</p>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-sm text-slate-400 font-medium italic">
+            © 2026 Directorate of Technical Education. All rights reserved.
+          </p>
+        </div>
       </div>
 
-      <div className="relative z-10 w-full max-w-sm">
-        <div className="bg-white/85 backdrop-blur-sm border border-gray-100 ring-1 ring-black/5 shadow-[0_10px_25px_rgba(0,0,0,0.05)] rounded-2xl p-6 hover:shadow-[0_12px_30px_rgba(0,0,0,0.08)] transition-all duration-300">
-          <div className="mb-6 text-center">
-            <h2 className="text-xl font-semibold text-gray-800 tracking-tight mb-1 capitalize">
+      {/* Right Side: Login Form */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 sm:p-12 relative">
+        {/* Back to Home Button */}
+        <button 
+          onClick={() => navigate('/')}
+          className="absolute top-8 right-8 z-50 flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-all active:scale-95 text-xs uppercase tracking-wider shadow-sm border border-slate-200/50"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001-1m-6 0h6" />
+          </svg>
+          Home
+        </button>
+
+        <div className="absolute top-8 left-8 lg:hidden">
+           <img src={govtLogo} alt="Govt Logo" className="h-10 w-auto" />
+        </div>
+
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center lg:text-left">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
               {role === 'student' && studentLoginView === 'forgot'
-                ? 'Reset password'
+                ? 'Reset Password'
                 : role === 'student' && studentLoginView === 'forgotSent'
-                  ? 'Check your email'
-                  : config.title}
+                  ? 'Check Email'
+                  : 'Welcome Back'}
             </h2>
-            <p className="text-sm text-gray-500 font-medium">
+            <p className="text-slate-500 font-medium mt-2">
               {role === 'student' && studentLoginView === 'forgot'
-                ? 'Enter your registered email — we will send a verification link to reset your password.'
+                ? 'Enter your email to receive a reset link.'
                 : role === 'student' && studentLoginView === 'forgotSent'
-                  ? 'Use the link we sent to set a new password (valid for 1 hour).'
-                  : 'Access your DOTE portal'}
+                  ? 'Verification link sent to your email.'
+                  : 'Please sign in to your official account'}
             </p>
           </div>
 
-          {role === 'student' && studentLoginView === 'forgotSent' ? (
-            <div className="space-y-4 text-center">
-              <p className="text-sm text-gray-600 leading-relaxed">
-                If an account exists for that email, you will receive instructions shortly. Open the email on this device
-                and tap the link to choose a new password.
-              </p>
-              {forgotSentDevLink && import.meta.env.DEV ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-left">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800 mb-1">
-                    Dev only (SMTP not configured)
-                  </p>
-                  <a
-                    href={forgotSentDevLink}
-                    className="break-all text-xs font-mono text-blue-700 underline"
-                  >
-                    {forgotSentDevLink}
-                  </a>
-                </div>
-              ) : null}
+          {/* Role Tabs */}
+          <div className="p-1 bg-slate-100/80 rounded-xl flex items-center shadow-inner border border-slate-200/50">
+            {Object.keys(roleConfigs).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  setRole(tab);
+                  setFormData({ identifier: '', password: '' });
+                  setStudentLoginView('login');
+                }}
+                className={`flex-1 py-2 rounded-lg text-[13px] font-bold transition-all duration-300 capitalize ${
+                  role === tab ? `bg-white text-${roleConfigs[tab].accentColor}-700 shadow-sm ring-1 ring-black/5` : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {studentLoginView === 'forgotSent' ? (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                 <p className="text-sm text-blue-800 leading-relaxed font-medium">
+                   We've sent a recovery link to your registered email address. Please follow the instructions to reset your password.
+                 </p>
+              </div>
               <button
                 type="button"
-                onClick={() => {
-                  setStudentLoginView('login');
-                  setForgotEmail('');
-                  setForgotSentDevLink('');
-                }}
-                className="text-sm font-bold text-blue-600 hover:text-blue-800"
+                onClick={() => setStudentLoginView('login')}
+                className="w-full py-3 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
               >
-                ← Back to student login
+                ← Back to Login
               </button>
             </div>
-          ) : role === 'student' && studentLoginView === 'forgot' ? (
-            <form onSubmit={handleForgotSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">
-                  Registered email
+          ) : (
+            <form onSubmit={studentLoginView === 'forgot' ? handleForgotSubmit : handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em] px-1">
+                  {studentLoginView === 'forgot' ? 'Email Address' : (role === 'student' ? 'Email or Mobile' : role === 'college' ? 'Institution Code' : 'User ID')}
                 </label>
-                <div className="relative group/input">
-                  <input
-                    type="email"
-                    name="forgotEmail"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-10 pr-4 text-sm font-medium text-gray-700 outline-none transition-all focus:bg-white focus:border-gray-400"
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-[11px] text-gray-400 px-1">
-                  Password reset uses <span className="font-semibold text-gray-600">email verification only</span> (not
-                  mobile).
-                </p>
+                <input
+                  type={studentLoginView === 'forgot' ? 'email' : 'text'}
+                  name={studentLoginView === 'forgot' ? 'forgotEmail' : 'identifier'}
+                  value={studentLoginView === 'forgot' ? forgotEmail : formData.identifier}
+                  onChange={studentLoginView === 'forgot' ? (e) => setForgotEmail(e.target.value) : handleInputChange}
+                  placeholder={studentLoginView === 'forgot' ? 'Enter email' : 'Username'}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-300"
+                />
               </div>
 
-              <button
-                type="submit"
-                disabled={forgotLoading}
-                className={`w-full bg-linear-to-r ${config.gradient} text-white font-semibold py-2.5 rounded-lg shadow-sm transition-all duration-300 disabled:opacity-70 text-sm tracking-wide`}
-              >
-                {forgotLoading ? 'Sending…' : 'Send reset link'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setStudentLoginView('login');
-                  setForgotEmail('');
-                }}
-                className="w-full text-sm font-bold text-gray-500 hover:text-gray-800"
-              >
-                ← Back to login
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">
-                  {role === 'student' ? 'Email or mobile' : role === 'college' ? 'Institution code' : 'User ID'}
-                </label>
-                <div className="relative group/input">
-                  <input
-                    type="text"
-                    name="identifier"
-                    value={formData.identifier}
-                    onChange={handleInputChange}
-                    placeholder={
-                      role === 'student'
-                        ? 'Email or 10-digit mobile'
-                        : role === 'college'
-                          ? 'Enter institution code'
-                          : 'Enter user ID'
-                    }
-                    autoComplete="username"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-10 pr-4 text-sm font-medium text-gray-700 outline-none transition-all focus:bg-white focus:border-gray-400"
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                    {role === 'student' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" /></svg>
+              {studentLoginView !== 'forgot' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em]">Password</label>
+                    {role === 'student' && (
+                      <button
+                        type="button"
+                        onClick={() => setStudentLoginView('forgot')}
+                        className="text-[11px] font-bold text-blue-600 hover:text-blue-800"
+                      >
+                        Forgot?
+                      </button>
                     )}
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between px-1">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Password</label>
-                  {role === 'student' ? (
-                    <button
-                      type="button"
-                      onClick={() => setStudentLoginView('forgot')}
-                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline"
-                    >
-                      Forgot password?
-                    </button>
-                  ) : null}
-                </div>
-                <div className="relative group/input">
                   <input
                     type="password"
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="••••••••"
-                    autoComplete="current-password"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-10 pr-4 text-sm font-medium text-gray-700 outline-none transition-all focus:bg-white focus:border-gray-400"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-300"
                   />
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                  </div>
                 </div>
-              </div>
+              )}
 
               <button
                 type="submit"
-                disabled={isLoading}
-                className={`w-full bg-linear-to-r ${config.gradient} text-white font-semibold py-2.5 rounded-lg shadow-sm transition-all duration-300 disabled:opacity-70 text-sm tracking-wide`}
+                disabled={isLoading || forgotLoading}
+                className={`w-full bg-linear-to-r ${config.gradient} text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 text-sm tracking-wide uppercase`}
               >
-                {isLoading ? 'Verifying...' : 'Login to Account'}
+                {isLoading || forgotLoading ? 'Processing...' : (studentLoginView === 'forgot' ? 'Send Reset Link' : 'Sign In')}
               </button>
             </form>
           )}
 
           {role === 'student' && studentLoginView === 'login' && (
-            <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-              <p className="text-xs font-semibold text-gray-400">
-                New applicant?{' '}
+            <div className="pt-6 border-t border-slate-100 text-center">
+              <p className="text-sm font-bold text-slate-400">
+                New to the portal?{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/student-register')}
-                  className="text-gray-600 hover:text-gray-900 font-bold uppercase tracking-wide"
+                  className="text-blue-600 hover:text-blue-800 transition-colors"
                 >
-                  Register
+                  Create Account
                 </button>
               </p>
             </div>
           )}
+
+          {studentLoginView === 'forgot' && (
+             <button
+              type="button"
+              onClick={() => setStudentLoginView('login')}
+              className="w-full py-2 text-sm font-bold text-slate-500 hover:text-slate-800"
+            >
+              ← Return to Login
+            </button>
+          )}
+        </div>
+        
+        <div className="absolute bottom-8 text-[11px] font-bold text-slate-300 uppercase tracking-widest hidden lg:block">
+           Official Portal • Directorate of Technical Education
         </div>
       </div>
     </div>

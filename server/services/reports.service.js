@@ -22,6 +22,16 @@ const REPORT_TYPES_COLLEGE = ['date', 'date_collection', 'gender', 'community', 
 
 let studentMasterColumnsCache = null;
 
+function formatDate(d) {
+  if (!d || d === '—') return '—';
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) return String(d);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
 function parseFilters(query) {
   const dateFrom = query.dateFrom || null;
   const dateTo = query.dateTo || null;
@@ -219,7 +229,7 @@ async function runDateDetailReport(where, params) {
   );
   const rows = dbRows.map((r) => {
     const d = r.regDate;
-    const label = d instanceof Date ? d.toISOString().slice(0, 10) : String(d ?? '—').slice(0, 10);
+    const label = formatDate(d);
     const app = r.applicationNo != null && String(r.applicationNo).trim() !== '' ? String(r.applicationNo).trim() : '—';
     const contact =
       r.contact != null && String(r.contact).trim() !== '' ? String(r.contact).trim() : '—';
@@ -233,7 +243,7 @@ async function runDateDetailReport(where, params) {
   });
   return {
     rows,
-    note: 'Each row is one student record. Date is the registration date.',
+    note: null,
   };
 }
 
@@ -280,7 +290,7 @@ async function runGroupedReport(type, where, params) {
     params
   );
   const out = rows.map((r) => ({
-    label: r.label instanceof Date ? r.label.toISOString().slice(0, 10) : String(r.label ?? '—'),
+    label: formatDate(r.label),
     count: Number(r.count),
   }));
   return { rows: out, note: null };
@@ -309,7 +319,7 @@ async function runDateCollectionDetailReport(where, params) {
 
   const rows = dbRows.map((r) => {
     const d = r.regDate;
-    const label = d instanceof Date ? d.toISOString().slice(0, 10) : String(d ?? '—').slice(0, 10);
+    const label = formatDate(d);
     const app = r.applicationNo != null && String(r.applicationNo).trim() !== '' ? String(r.applicationNo).trim() : '—';
     const contact =
       r.contact != null && String(r.contact).trim() !== '' ? String(r.contact).trim() : '—';

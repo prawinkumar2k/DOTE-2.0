@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import axios from 'axios';
+import { formatDate, formatDateTime } from '../../utils/dateUtils';
 import MainLayout from '../../components/layout/MainLayout';
 import { FileText, Clock, Download, ArrowUpRight, MapPin, User2 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
@@ -27,21 +28,6 @@ const CollegeDashboard = () => {
     fetchDashboard();
   }, []);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'NA';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleDateString('en-GB').replace(/\//g, '-');
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return 'NA';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    const dmy = date.toLocaleDateString('en-GB').replace(/\//g, '-');
-    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return `${dmy} ${time}`;
-  };
 
   const stats = data?.stats || {};
   const timelineData = data?.timelineData || [];

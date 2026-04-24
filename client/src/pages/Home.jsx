@@ -7,7 +7,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-blue-100 selection:text-blue-900">
       <Navbar />
-      <main>
+      <main className="pt-20">
         <HeroSection />
         <HowItWorks />
       </main>

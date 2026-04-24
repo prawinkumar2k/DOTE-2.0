@@ -5,6 +5,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Download, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { formatDate } from '../../utils/dateUtils';
 
 function parseCollegeChoiceCodes(collegeChoices) {
   if (collegeChoices == null || collegeChoices === '') return [];
@@ -274,7 +275,7 @@ const StudentApplications = () => {
                         <p className="text-xs text-slate-500">{app.mobile || '—'}</p>
                       </td>
                       <td className="px-4 py-4 text-sm text-slate-600">
-                        {app.created_at ? new Date(app.created_at).toLocaleDateString() : '—'}
+                        {formatDate(app.created_at)}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-2">

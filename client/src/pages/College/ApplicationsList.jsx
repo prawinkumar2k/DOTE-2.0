@@ -3,6 +3,7 @@ import axios from 'axios';
 import MainLayout from '../../components/layout/MainLayout';
 import { Search, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { formatDate } from '../../utils/dateUtils';
 
 const normalizeFileUrl = (filePath) => {
   if (!filePath) return '';
@@ -54,7 +55,7 @@ const ApplicationsList = () => {
             db_id: app.id,
             id: app.application_no || `APP-${app.id}`,
             name: app.student_name || 'Anonymous',
-            date: app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : '2026-04-10',
+            date: formatDate(app.created_at),
             gender: app.gender || '—',
             community: app.community || '—',
             email: app.email,
@@ -199,7 +200,7 @@ const ApplicationsList = () => {
                       <p className="text-xs text-slate-500">{app.mobile || '—'}</p>
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">
-                      {app.raw?.created_at ? new Date(app.raw.created_at).toLocaleDateString() : (app.date || '—')}
+                      {formatDate(app.raw?.created_at || app.date)}
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-2 max-w-[240px]">

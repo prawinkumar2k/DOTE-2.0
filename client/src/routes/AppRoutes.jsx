@@ -7,15 +7,13 @@ import StudentResetPassword from '../pages/Auth/StudentResetPassword';
 import AdminDashboard from '../pages/Admin/Dashboard';
 import ManageColleges from '../pages/Admin/ManageColleges';
 import MasterData from '../pages/Admin/MasterData';
-import Reports from '../pages/Admin/Reports';
+import CommonReports from '../pages/Common/Reports';
 import StudentApplications from '../pages/Admin/StudentApplications';
 import StudentApplicationReport from '../pages/Admin/StudentApplicationReport';
-import AdminReportPreview from '../pages/Admin/ReportPreview';
+import CommonReportPreview from '../pages/Common/ReportPreview';
 import CollegeDashboard from '../pages/College/Dashboard';
 import ApplicationsList from '../pages/College/ApplicationsList';
 import ApplicationDetail from '../pages/College/ApplicationDetail';
-import CollegeReports from '../pages/College/Reports';
-import CollegeReportPreview from '../pages/College/ReportPreview';
 import ApplicationForm from '../pages/Student/ApplicationForm';
 import StudentPayment from '../pages/Student/StudentPayment';
 import MyApp from '../pages/Student/MyApp';
@@ -35,8 +33,8 @@ const AppRoutes = () => {
         <Route path="/admin/student-applications" element={<StudentApplications />} />
         <Route path="/admin/student-applications/:id/report" element={<StudentApplicationReport />} />
         <Route path="/admin/master-data" element={<MasterData />} />
-        <Route path="/admin/reports" element={<Reports />} />
-        <Route path="/admin/reports/preview" element={<AdminReportPreview />} />
+        <Route path="/admin/reports" element={<CommonReports role="admin" />} />
+        <Route path="/admin/reports/preview" element={<CommonReportPreview role="admin" />} />
       </Route>
 
       {/* College Routes */}
@@ -44,8 +42,8 @@ const AppRoutes = () => {
         <Route path="/college/dashboard" element={<CollegeDashboard />} />
         <Route path="/college/applications" element={<ApplicationsList />} />
         <Route path="/college/applications/:id" element={<ApplicationDetail />} />
-        <Route path="/college/reports" element={<CollegeReports />} />
-        <Route path="/college/reports/preview" element={<CollegeReportPreview />} />
+        <Route path="/college/reports" element={<CommonReports role="college" />} />
+        <Route path="/college/reports/preview" element={<CommonReportPreview role="college" />} />
       </Route>
 
       {/* Student Routes */}

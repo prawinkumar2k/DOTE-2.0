@@ -113,7 +113,7 @@ const MyApp = () => {
             <Section title="Personal Information" icon={<User size={20} />}>
               <div className="grid md:grid-cols-2 gap-y-4 gap-x-8">
                 <DetailItem label="Full Name" value={s.student_name} />
-                <DetailItem label="Date of Birth" value={s.dob ? new Date(s.dob).toLocaleDateString('en-IN') : '—'} />
+                <DetailItem label="Date of Birth" value={formatDate(s.dob)} />
                 <DetailItem label="Gender" value={s.gender} />
                 <DetailItem label="Aadhaar" value={s.aadhar ? `XXXX-XXXX-${String(s.aadhar).slice(-4)}` : '—'} />
                 <DetailItem label="Community" value={s.community} />

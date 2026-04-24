@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import govtLogo from '../assets/govt_logo.png';
+import { formatDate } from '../utils/dateUtils';
 
 const ApplicationReport = ({ data, colleges = [], headerActions = null }) => {
   const s = data?.student;
@@ -109,7 +110,7 @@ const ApplicationReport = ({ data, colleges = [], headerActions = null }) => {
               <DataRow label="Mother Tongue" value={s.mother_tongue} />
               <DataRow label="Parent/Guardian Occupation" value={s.parent_occupation} />
               <DataRow label="Parent/Guardian Annual Income" value={s.parent_annual_income ? `LESS THAN ${s.parent_annual_income}` : ''} />
-              <DataRow label="Date of Birth" value={s.dob ? new Date(s.dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : ''} />
+              <DataRow label="Date of Birth" value={formatDate(s.dob)} />
               <DataRow label="Age" value={s.age} />
               <DataRow label="Gender" value={s.gender} />
               <DataRow label="Citizenship" value={s.citizenship} />

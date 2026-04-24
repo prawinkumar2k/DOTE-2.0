@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatDate } from './dateUtils';
 
 export const generateApplicationPDF = (data, applicationNo) => {
   try {
@@ -20,7 +21,7 @@ export const generateApplicationPDF = (data, applicationNo) => {
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     doc.text(`Application No: ${applicationNo}`, 20, 55);
-    doc.text(`Date of Submission: ${new Date().toLocaleDateString()}`, 140, 55);
+    doc.text(`Date of Submission: ${formatDate(new Date())}`, 140, 55);
     doc.line(20, 60, 190, 60);
 
     // Section 1: Personal Details
@@ -30,7 +31,7 @@ export const generateApplicationPDF = (data, applicationNo) => {
     
     const personalData = [
       ['Full Name', data.fullName || '-'],
-      ['Date of Birth', data.dob || '-'],
+      ['Date of Birth', formatDate(data.dob) || '-'],
       ['Gender', data.gender || '-'],
       ['Community', data.community || '-'],
       ['Aadhaar No', data.aadhaar || '-'],

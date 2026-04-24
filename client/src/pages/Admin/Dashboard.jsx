@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import { Users, Building, FileText, ShieldCheck, Activity, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import axios from 'axios';
+import { formatDate } from '../../utils/dateUtils';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar } from 'recharts';
 
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899'];
@@ -49,12 +50,6 @@ const AdminDashboard = () => {
     { label: 'Admin Users', value: Number(stats.totalUsers || 0), icon: <ShieldCheck size={18} />, tone: 'violet' },
   ];
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'NA';
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleDateString('en-GB').replace(/\//g, '-');
-  };
 
   if (loading) {
     return (

@@ -1,32 +1,41 @@
 # ─── DOTE 2.0 — Production Docker Compose ───────────────────────────────────────
-# Usage:
-#   cp .env.example .env   (edit values)
-#   docker compose up -d --build
-#   docker compose logs -f
+#
+# SUPPORTS TWO MODES:
+#   Mode A (External DB):  Set DB_HOST to your remote MySQL IP in .env
+#                          The "db" service will NOT be started.
+#                          Run: docker compose up -d server client
+#
+#   Mode B (Docker DB):    Set DB_HOST=db in .env
+#                          Run: docker compose --profile with-db up -d
+#
+# Quick Start:
+#   1. cp .env.example .env  (edit values)
+#   2. docker compose up -d --build
+#   3. docker compose logs -f
 
 services:
   # ═══════════════════════════════════════════════════════════════════════════════
-  # MySQL Database
+  # MySQL Database (OPTIONAL — only if you don't have an external DB)
+  # Start with: docker compose --profile with-db up -d
   # ═══════════════════════════════════════════════════════════════════════════════
   db:
     image: mysql:8.0
     container_name: dote_db
     restart: unless-stopped
+    profiles:
+      - with-db
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: ${DB_NAME:-admission_dote}
       MYSQL_USER: ${DB_USER:-dote_user}
       MYSQL_PASSWORD: ${DB_PASS:-dote_password}
     volumes:
       - dote_db_data:/var/lib/mysql
       - ./server/migrations:/docker-entrypoint-initdb.d:ro
-    # NOT exposed to host — only accessible within Docker network
-    # ports:
-    #   - "3306:3306"   # ⚠️ Uncomment ONLY for local debugging
     networks:
       - dote_internal
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -37,12 +46,9 @@ services:
       --collation-server=utf8mb4_unicode_ci
       --max_connections=200
       --innodb_buffer_pool_size=256M
-      --slow_query_log=1
-      --slow_query_log_file=/var/lib/mysql/slow.log
-      --long_query_time=2
 
   # ═══════════════════════════════════════════════════════════════════════════════
-  # Backend (Node.js + Express)
+  # Backend — Node.js + Express API
   # ═══════════════════════════════════════════════════════════════════════════════
   server:
     build:
@@ -53,18 +59,23 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5000
-      - DB_HOST=db
-      - DB_PORT=3306
+      # ─── Database ──────────────────────────────────────────────────────────
+      # For EXTERNAL DB: set DB_HOST to your remote IP (e.g., 88.222.244.171)
+      # For DOCKER DB:   set DB_HOST=db
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-3306}
       - DB_USER=${DB_USER:-dote_user}
       - DB_PASS=${DB_PASS:-dote_password}
       - DB_NAME=${DB_NAME:-admission_dote}
       - DB_POOL_LIMIT=${DB_POOL_LIMIT:-20}
+      # ─── Auth ──────────────────────────────────────────────────────────────
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRE=${JWT_EXPIRE:-24h}
       - COOKIE_EXPIRE=${COOKIE_EXPIRE:-1}
+      # ─── App ───────────────────────────────────────────────────────────────
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
-      # Mail (optional)
+      # ─── Mail (optional) ───────────────────────────────────────────────────
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-}
       - SMTP_SECURE=${SMTP_SECURE:-}
@@ -72,14 +83,9 @@ services:
       - SMTP_PASS=${SMTP_PASS:-}
       - MAIL_FROM=${MAIL_FROM:-}
       - SMTP_TLS_REJECT_UNAUTHORIZED=${SMTP_TLS_REJECT_UNAUTHORIZED:-true}
-    depends_on:
-      db:
-        condition: service_healthy
     volumes:
-      - ./server/uploads:/usr/src/app/uploads
-    # NOT exposed to host — only Nginx talks to it
-    # ports:
-    #   - "5000:5000"   # ⚠️ Uncomment ONLY for local debugging
+      # Persistent file uploads — survives container restarts and rebuilds
+      - upload_data:/usr/src/app/uploads
     networks:
       - dote_internal
     logging:
@@ -89,7 +95,7 @@ services:
         max-file: "5"
 
   # ═══════════════════════════════════════════════════════════════════════════════
-  # Frontend (React + Nginx reverse proxy)
+  # Frontend — React (Vite build) + Nginx Reverse Proxy
   # ═══════════════════════════════════════════════════════════════════════════════
   client:
     build:
@@ -98,11 +104,10 @@ services:
     container_name: dote_client
     restart: unless-stopped
     depends_on:
-      server:
-        condition: service_started
+      - server
     ports:
       - "${APP_PORT:-80}:80"
-      # - "443:443"  # Uncomment when SSL is configured
+      # - "443:443"       # Uncomment when SSL is configured
     networks:
       - dote_internal
     logging:
@@ -112,14 +117,16 @@ services:
         max-file: "3"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Volumes
+# Named Volumes — persistent data that survives container rebuilds
 # ═══════════════════════════════════════════════════════════════════════════════
 volumes:
   dote_db_data:
     driver: local
+  upload_data:
+    driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Networks — isolated internal network
+# Internal Network — DB and backend NOT accessible from outside
 # ═══════════════════════════════════════════════════════════════════════════════
 networks:
   dote_internal:

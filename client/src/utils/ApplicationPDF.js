@@ -3,7 +3,6 @@ import autoTable from 'jspdf-autotable';
 
 export const generateApplicationPDF = (data, applicationNo) => {
   try {
-    console.log('Generating PDF for:', applicationNo);
     const doc = new jsPDF();
     
     // Header

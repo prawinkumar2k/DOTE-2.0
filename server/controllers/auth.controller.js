@@ -377,74 +377,6 @@ const changePassword = async (req, res) => {
   }
 };
 
-const addCollege = async (req, res) => {
-  try {
-    const { ins_code, ins_name } = req.body;
-
-    if (!ins_code || !ins_name) {
-      return res.status(400).json({ message: 'Institution Code and Name are required' });
-    }
-
-    const insertId = await Institution.create(req.body);
-
-    res.status(201).json({
-      success: true,
-      message: 'College added successfully',
-      id: insertId
-    });
-  } catch (err) {
-    console.error('Add college error:', err);
-    if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ message: 'Institution with this code already exists' });
-    }
-    res.status(500).json({ message: 'Server error while adding college' });
-  }
-};
-const getDashboardStats = async (req, res) => {
-  try {
-    const [totalColleges, totalStudents, totalAdmins, govtColleges, aidedColleges, selfFinanceColleges, communityBreakdown, casteBreakdown, schoolTypeBreakdown, collegeDemographics] = await Promise.all([
-      Institution.getCount(),
-      Student.getCount(),
-      User.getAdminCount(),
-      Institution.getCountByType('Government'),
-      Institution.getCountByType('Aided'),
-      Institution.getCountByType('Self Finance'),
-      Student.getCommunityBreakdown(),
-      Student.getCasteBreakdown(),
-      Student.getSchoolTypeBreakdown(),
-      Institution.getDemographics(),
-    ]);
-
-    res.status(200).json({
-      success: true,
-      stats: {
-        totalColleges,
-        totalStudents,
-        totalAdmins,
-        govtColleges,
-        aidedColleges,
-        selfFinanceColleges,
-      },
-      communityBreakdown,
-      casteBreakdown,
-      schoolTypeBreakdown,
-      collegeDemographics,
-    });
-  } catch (err) {
-    console.error('Dashboard stats error:', err);
-    res.status(500).json({ message: 'Server error while fetching dashboard stats' });
-  }
-};
-
-const getColleges = async (req, res) => {
-  try {
-    const colleges = await Institution.getAll();
-    res.status(200).json({ success: true, colleges });
-  } catch (err) {
-    console.error('Fetch colleges error:', err);
-    res.status(500).json({ message: 'Server error while fetching colleges' });
-  }
-};
 
 /** Student-only: request password reset email (verification link). */
 const studentForgotPassword = async (req, res) => {
@@ -557,7 +489,5 @@ module.exports = {
   changePassword,
   studentForgotPassword,
   studentResetPasswordWithToken,
-  addCollege,
-  getDashboardStats,
-  getColleges,
 };
+

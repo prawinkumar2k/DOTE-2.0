@@ -32,6 +32,7 @@ const CHART_TITLE_MAP = {
   date_collection: 'Gradient area chart — collection by date',
   gender: 'Donut chart — gender distribution',
   community: 'Pie chart — community distribution',
+  admission_type: 'Pie chart — admission type distribution',
   college: 'Horizontal bar chart — by institution',
   college_collection: 'Horizontal bar chart + ranking — college collection',
   district: 'Bar chart — district (last institution)',
@@ -198,6 +199,7 @@ export default function ReportChartBlock({ reportType, rows, loading, payloadTit
         );
 
       case 'community':
+      case 'admission_type':
         return (
           <PieChart>
             <Pie

@@ -10,6 +10,7 @@ const REPORT_TABS = [
   { id: 'date', label: 'Date wise' },
   { id: 'gender', label: 'Gender wise' },
   { id: 'community', label: 'Community wise' },
+  { id: 'admission_type', label: 'Admission Type' },
   { id: 'district', label: 'District wise' },
   { id: 'hostel', label: 'Hostel wise' },
   { id: 'date_collection', label: 'Date wise collection' },
@@ -20,6 +21,7 @@ const REPORT_HEADING_MAP = {
   date_collection: 'DATEWISE COLLECTION REPORT',
   gender: 'GENDERWISE APPLICATION REPORT',
   community: 'COMMUNITYWISE APPLICATION REPORT',
+  admission_type: 'ADMISSION TYPE APPLICATION REPORT',
   district: 'DISTRICTWISE APPLICATION REPORT',
   hostel: 'HOSTELWISE APPLICATION REPORT',
 };
@@ -29,6 +31,7 @@ const REPORT_LABEL_MAP = {
   date_collection: 'Date wise collection',
   gender: 'Gender wise',
   community: 'Community wise',
+  admission_type: 'Admission type',
   district: 'District wise',
   hostel: 'Hostel wise',
 };

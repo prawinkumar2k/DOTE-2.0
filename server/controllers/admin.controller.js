@@ -185,9 +185,10 @@ const bulkDeleteColleges = async (req, res) => {
 
 const getMasterData = async (req, res) => {
   try {
-    const [districts, communities] = await Promise.all([
+    const [districts, communities, religions] = await Promise.all([
       Master.getAllDistricts(),
       Master.getAllCommunities(),
+      Master.getAllReligions(),
     ]);
     let fees = [];
     try {
@@ -195,7 +196,7 @@ const getMasterData = async (req, res) => {
     } catch (e) {
       console.warn('[getMasterData] fees_master:', e.message);
     }
-    res.status(200).json({ success: true, districts, communities, fees });
+    res.status(200).json({ success: true, districts, communities, religions, fees });
   } catch (err) {
     console.error('Master data fetch error:', err);
     res.status(500).json({ message: 'Failed to fetch master data' });
@@ -213,6 +214,9 @@ const addMasterEntry = async (req, res) => {
     } else if (type === 'communities') {
       if (!name) return res.status(400).json({ message: 'Name is required' });
       insertId = await Master.addCommunity(name);
+    } else if (type === 'religions') {
+      if (!name) return res.status(400).json({ message: 'Name is required' });
+      insertId = await Master.addReligion(name);
     } else if (type === 'fees') {
       const { community, fees } = req.body;
       if (!community || String(community).trim() === '') {
@@ -249,6 +253,8 @@ const deleteMasterEntry = async (req, res) => {
       affectedRows = await Master.deleteDistrict(id);
     } else if (type === 'communities') {
       affectedRows = await Master.deleteCommunity(id);
+    } else if (type === 'religions') {
+      affectedRows = await Master.deleteReligion(id);
     } else if (type === 'fees') {
       affectedRows = await Master.deleteFee(id);
     } else {

@@ -111,6 +111,16 @@ const Master = {
     const [result] = await db.query('DELETE FROM fees_master WHERE id = ?', [id]);
     return result.affectedRows;
   },
+
+  addReligion: async (name) => {
+    const [result] = await db.query('INSERT INTO religion_master (religion, created_at, updated_at) VALUES (?, NOW(), NOW())', [name]);
+    return result.insertId;
+  },
+
+  deleteReligion: async (id) => {
+    const [result] = await db.query('DELETE FROM religion_master WHERE id = ?', [id]);
+    return result.affectedRows;
+  },
 };
 
 module.exports = Master;

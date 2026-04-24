@@ -12,6 +12,7 @@ const MasterData = () => {
   const [activeTab, setActiveTab] = useState('districts');
   const [districts, setDistricts] = useState([]);
   const [communities, setCommunities] = useState([]);
+  const [religions, setReligions] = useState([]);
   const [fees, setFees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,6 +35,7 @@ const MasterData = () => {
       if (response.data.success) {
         setDistricts(response.data.districts);
         setCommunities(response.data.communities);
+        setReligions(response.data.religions || []);
         setFees(Array.isArray(response.data.fees) ? response.data.fees : []);
       }
     } catch (err) {
@@ -160,10 +162,11 @@ const MasterData = () => {
   const categories = [
     { id: 'districts', title: 'Districts', icon: <MapPin size={18} />, count: districts.length },
     { id: 'communities', title: 'Communities', icon: <Layers size={18} />, count: communities.length },
+    { id: 'religions', title: 'Religions', icon: <AlertCircle size={18} />, count: religions.length },
     { id: 'fees', title: 'Fees master', icon: <IndianRupee size={18} />, count: fees.length },
   ];
 
-  const currentData = activeTab === 'districts' ? districts : activeTab === 'communities' ? communities : fees;
+  const currentData = activeTab === 'districts' ? districts : activeTab === 'communities' ? communities : activeTab === 'religions' ? religions : fees;
   
   const filteredData = currentData.filter((item) => {
     if (activeTab === 'districts') {
@@ -171,6 +174,9 @@ const MasterData = () => {
     }
     if (activeTab === 'communities') {
       return item.community_name.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    if (activeTab === 'religions') {
+      return item.religion_name.toLowerCase().includes(searchQuery.toLowerCase());
     }
     const hay = `${item.community || ''} ${item.fees ?? ''}`.toLowerCase();
     return hay.includes(searchQuery.toLowerCase());
@@ -195,7 +201,7 @@ const MasterData = () => {
             className="btn-primary flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-blue-100"
           >
             <Plus size={18} />{' '}
-            {activeTab === 'districts' ? 'Add New District' : activeTab === 'communities' ? 'Add New Community' : 'Add community fee'}
+            {activeTab === 'districts' ? 'Add New District' : activeTab === 'communities' ? 'Add New Community' : activeTab === 'religions' ? 'Add New Religion' : 'Add community fee'}
           </button>
         </div>
 
@@ -242,7 +248,7 @@ const MasterData = () => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                 <input 
                   type="text" 
-                  placeholder={`Search ${activeTab === 'districts' ? 'districts' : activeTab === 'communities' ? 'communities' : 'fees'}...`} 
+                  placeholder={`Search ${activeTab === 'districts' ? 'districts' : activeTab === 'communities' ? 'communities' : activeTab === 'religions' ? 'religions' : 'fees'}...`} 
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl font-medium focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -275,7 +281,9 @@ const MasterData = () => {
                               ? item.district_name
                               : activeTab === 'communities'
                                 ? item.community_name
-                                : item.community}
+                                : activeTab === 'religions'
+                                  ? item.religion_name
+                                  : item.community}
                           </p>
                           {activeTab === 'districts' && (
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{item.state_name}</p>
@@ -306,7 +314,9 @@ const MasterData = () => {
                                 ? item.district_name
                                 : activeTab === 'communities'
                                   ? item.community_name
-                                  : `${item.community} (₹${item.fees})`
+                                  : activeTab === 'religions'
+                                    ? item.religion_name
+                                    : `${item.community} (₹${item.fees})`
                             )
                           }
                           className="p-2.5 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
@@ -363,7 +373,7 @@ const MasterData = () => {
                           ? editingFeeId
                             ? 'Edit application fee'
                             : 'Add application fee'
-                          : `Add ${activeTab === 'districts' ? 'District' : 'Community'}`}
+                          : `Add ${activeTab === 'districts' ? 'District' : activeTab === 'communities' ? 'Community' : 'Religion'}`}
                       </h2>
                       <p className="text-sm font-medium text-slate-400">
                         {activeTab === 'fees'
@@ -422,7 +432,7 @@ const MasterData = () => {
                     <>
                       <div>
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">
-                          {activeTab === 'districts' ? 'District Name' : 'Community Name'}
+                          {activeTab === 'districts' ? 'District Name' : activeTab === 'communities' ? 'Community Name' : 'Religion Name'}
                         </label>
                         <input 
                           autoFocus

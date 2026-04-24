@@ -28,7 +28,7 @@ const MainLayout = ({ children, role = 'guest' }) => {
           <Link to="/" className="flex min-w-0 flex-1 items-center gap-2 pr-2">
             <img src="/src/assets/govt_logo.png" alt="Logo" className="h-8 w-auto shrink-0" />
             <span className="truncate text-sm font-bold tracking-tight text-blue-950 sm:text-lg md:text-xl">
-              DIRECTORATE OF TECHNICAL EDUCATION - AdmissionPortal
+              DIRECTORATE OF TECHNICAL EDUCATION - Admission Portal
             </span>
           </Link>
 

@@ -10,14 +10,15 @@ const TYPE_LABELS = {
   date_collection: 'Date',
   gender: 'Gender',
   community: 'Community',
+  admission_type: 'Admission Type',
   college: 'College',
   college_collection: 'College',
   district: 'District (last institution)',
   hostel: 'Hostel requirement',
 };
 
-const REPORT_TYPES_ADMIN = ['date', 'date_collection', 'gender', 'community', 'college', 'college_collection', 'district', 'hostel'];
-const REPORT_TYPES_COLLEGE = ['date', 'date_collection', 'gender', 'community', 'district', 'hostel'];
+const REPORT_TYPES_ADMIN = ['date', 'date_collection', 'gender', 'community', 'admission_type', 'college', 'college_collection', 'district', 'hostel'];
+const REPORT_TYPES_COLLEGE = ['date', 'date_collection', 'gender', 'community', 'admission_type', 'district', 'hostel'];
 
 let studentMasterColumnsCache = null;
 
@@ -244,6 +245,9 @@ async function runGroupedReport(type, where, params) {
       break;
     case 'community':
       groupExpr = "COALESCE(NULLIF(TRIM(community), ''), 'Not specified')";
+      break;
+    case 'admission_type':
+      groupExpr = "COALESCE(NULLIF(TRIM(admission_type), ''), 'Not specified')";
       break;
     case 'district':
       groupExpr = "COALESCE(NULLIF(TRIM(last_institution_district), ''), 'Not specified')";

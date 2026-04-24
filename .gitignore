@@ -3,10 +3,11 @@ node_modules/
 package-lock.json
 yarn.lock
 
-# Environment variables
+# Environment variables (NEVER commit real secrets)
 .env
 .env.local
 .env.*.local
+server/.env
 
 # Build outputs
 dist/
@@ -19,7 +20,6 @@ out/
 .idea/
 *.swp
 *.swo
-.DS_Store
 *.log
 
 # Testing
@@ -28,12 +28,19 @@ coverage/
 
 # Database
 *.sql
+!server/migrations/*.sql
 !schema.sql
 
-# Uploads (use only in .gitignore, not git)
+# Uploads (user-generated content)
 server/uploads/student/photos/*
 server/uploads/student/documents/*
+server/uploads/DOTE*
+server/uploads/home/*
+!server/uploads/.gitkeep
 !server/uploads/student/.gitkeep
+
+# Backups (large dumps — don't track)
+backups/
 
 # OS
 .DS_Store

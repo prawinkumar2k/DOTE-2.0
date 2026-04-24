@@ -409,7 +409,7 @@ const ManageColleges = () => {
               transition={{ duration: 0.25 }}
               className="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden z-10 border border-slate-100"
             >
-              <div className="sticky top-0 bg-white border-b border-slate-100 px-8 py-5 flex items-center justify-between z-10">
+              <div className="sticky top-16 bg-white border-b border-slate-100 px-8 py-5 flex items-center justify-between z-10">
                 <div>
                   <h2 className="text-2xl font-bold text-slate-900">{isEditMode ? 'Edit Institution' : 'Add New College'}</h2>
                   <p className="text-sm text-slate-500 mt-0.5">{isEditMode ? 'Modify existing institution details' : 'Fill in the institution details below'}</p>
@@ -524,7 +524,7 @@ const ManageColleges = () => {
           <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 px-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowViewModal(false)} />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: -20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: -20 }} transition={{ duration: 0.25 }} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden z-10 border border-slate-100">
-              <div className="sticky top-0 bg-white border-b border-slate-100 px-8 py-5 flex items-center justify-between z-10">
+              <div className="sticky top-16 bg-white border-b border-slate-100 px-8 py-5 flex items-center justify-between z-10">
                 <div>
                   <h2 className="text-2xl font-bold text-slate-900">Institution Details</h2>
                   <p className="text-sm text-slate-500 mt-0.5">{selectedCollege.ins_name}</p>

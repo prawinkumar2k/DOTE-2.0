@@ -6,29 +6,6 @@ const Master = {
     return rows;
   },
 
-  getCommunityByReligion: async (religionId) => {
-    const [rows] = await db.query(
-      'SELECT id, community_name, religion_id FROM community_master WHERE religion_id = ? ORDER BY community_name',
-      [religionId]
-    );
-    return rows;
-  },
-
-  getCasteByReligionAndCommunity: async (religionId, communityId) => {
-    const [rows] = await db.query(
-      'SELECT id, caste_name FROM caste_master WHERE religion_id = ? AND community_id = ? ORDER BY caste_name',
-      [religionId, communityId]
-    );
-    return rows;
-  },
-
-  getCasteByReligion: async (religionId) => {
-    const [rows] = await db.query(
-      'SELECT id, caste_name, community_id FROM caste_master WHERE religion_id = ? ORDER BY caste_name',
-      [religionId]
-    );
-    return rows;
-  },
 
   getAllCommunities: async () => {
     const [rows] = await db.query('SELECT id, community_name FROM community_master ORDER BY community_name');

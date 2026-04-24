@@ -18,47 +18,9 @@ const getMasterData = async (req, res) => {
     ]);
 
     // Build hierarchical structure: Religion -> Communities -> Castes
+    // Note: Database schema does not support hierarchy (no religion_id in community_master, caste is text-only)
     const religionCommunityCasteMap = {};
-    for (const religion of religions) {
-      let communitiesForReligion = [];
-      let castesForReligion = [];
-      try {
-        communitiesForReligion = await Master.getCommunityByReligion(religion.id);
-      } catch (err) {
-        console.warn(`[getMasterData] community_master for religion ${religion.id}:`, err.message);
-      }
-      try {
-        castesForReligion = await Master.getCasteByReligion(religion.id);
-      } catch (err) {
-        console.warn(`[getMasterData] caste_master for religion ${religion.id}:`, err.message);
-      }
-      religionCommunityCasteMap[religion.id] = {
-        religionId: religion.id,
-        religionName: religion.religion_name,
-        communities: [],
-        castes: []
-      };
-      const casteSeen = new Set();
-      for (const caste of castesForReligion) {
-        const key = String(caste.caste_name || '').trim().toLowerCase();
-        if (!key || casteSeen.has(key)) continue;
-        casteSeen.add(key);
-        religionCommunityCasteMap[religion.id].castes.push({
-          casteId: caste.id,
-          casteName: caste.caste_name
-        });
-      }
-      
-      for (const community of communitiesForReligion) {
-        const castesForCommunity = await Master.getCasteByReligionAndCommunity(religion.id, community.id);
-        const castes = castesForCommunity.map(c => ({ casteId: c.id, casteName: c.caste_name }));
-        religionCommunityCasteMap[religion.id].communities.push({
-          communityId: community.id,
-          communityName: community.community_name,
-          castes
-        });
-      }
-    }
+    // Skip hierarchical mapping as requested: Caste is user entry, Communities are flat.
 
     // Fetch other dynamic lookups from student_master/institution_master if needed
     // For now, mirroring the logic from app.js but using real masters for community/district

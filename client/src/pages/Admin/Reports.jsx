@@ -276,7 +276,7 @@ const Reports = () => {
             ) : (
               <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
                 <table className={`w-full text-sm ${isStudentDetailTable ? 'border border-slate-200' : ''}`}>
-                  <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
+                  <thead className="sticky top-16 bg-slate-50 border-b border-slate-200 z-10">
                     <tr>
                       {isStudentDetailTable ? (
                         <>

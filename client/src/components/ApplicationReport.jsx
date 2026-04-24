@@ -63,7 +63,7 @@ const ApplicationReport = ({ data, colleges = [], headerActions = null }) => {
   return (
     <div className="w-full min-h-screen bg-white text-black font-serif selection:bg-blue-100">
       {/* Action Bar - Hidden when printing */}
-      <div className="print:hidden sticky top-0 z-50 bg-white border-b border-slate-200 px-8 py-4 mb-8 flex justify-between items-center shadow-md no-serif">
+      <div className="print:hidden sticky top-16 z-30 bg-white border-b border-slate-200 px-8 py-4 mb-8 flex justify-between items-center shadow-md no-serif">
         <div>
           <h2 className="font-bold text-slate-800">Application Report Review</h2>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Official Format Verification</p>

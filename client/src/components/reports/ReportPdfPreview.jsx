@@ -31,7 +31,7 @@ export default function ReportPdfPreview({ title, backPath }) {
 
   return (
     <div className="w-full bg-white text-black">
-      <div className="print:hidden sticky top-0 z-40 bg-white border-b border-slate-200 px-6 py-4 mb-6 flex flex-wrap justify-between items-center gap-3 shadow-sm">
+      <div className="print:hidden sticky top-16 z-40 bg-white border-b border-slate-200 px-6 py-4 mb-6 flex flex-wrap justify-between items-center gap-3 shadow-sm">
         <div>
           <h2 className="font-bold text-slate-800">Application Report Review</h2>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Official Format Verification</p>

@@ -218,7 +218,7 @@ const DataTable = ({
             {/* Header Row */}
             <tr className="bg-slate-50/80 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
               {/* Checkbox Header */}
-              <th className="px-4 py-4 w-12 sticky top-0 bg-slate-50/80 z-20">
+              <th className="px-4 py-4 w-12 sticky top-16 bg-slate-50/80 z-20">
                 <div className="flex items-center justify-center">
                   <input
                     type="checkbox"
@@ -233,7 +233,7 @@ const DataTable = ({
               {columns.map((column, idx) => (
                 <th
                   key={idx}
-                  className={`px-6 py-4 font-black whitespace-nowrap sticky top-0 bg-slate-50/80 z-10 ${getStickyHeaderClass(idx)}`}
+                  className={`px-6 py-4 font-black whitespace-nowrap sticky top-16 bg-slate-50/80 z-10 ${getStickyHeaderClass(idx)}`}
                   style={{ width: column.width, minWidth: column.width }}
                 >
                   <div 
